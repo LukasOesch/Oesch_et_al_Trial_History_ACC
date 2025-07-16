@@ -1,33 +1,33 @@
 # -*- coding: utf-8 -*-
 """
+Code to reproduce analyses and plots shown on Figure 1 and Supplementary Figure 1
+
+Please make sure to run sequentially as some cells might depend on variables defined earlier.
+
 Created on Fri Jan 17 12:32:43 2025
 
 @author: Lukas Oesch
 """
 
-
-from chiCa import *
-import matplotlib.pyplot as plt
-import pandas as pd
-from scipy.stats import ttest_rel, wilcoxon, pearsonr
-from labdatatools import *
-import os
+from chiCa import * #Run inside chiCa path to directly import it. Otherwise use sys to add the path, see below.
 import matplotlib.pyplot as plt
 import matplotlib
+plt.rcParams["font.family"] = "Arial" #Use arial font for plotting labels
+import pandas as pd
+from scipy.stats import pearsonr
+from labdatatools import * #Make sure to have labdata-tools installed and the data directory set to where the data are stored
+import os
 from glob import glob
 from scipy.ndimage import gaussian_filter1d
-from scipy.stats import pearsonr
+# Add the path to the location containing the code for psychometric fits - please adapt to your specific path
 import sys
 sys.path.append('/Users/loesch/Documents/Churchland_lab/fit_psychometric/fit_psychometric')
 from analysis import *
 
 
-plt.rcParams["font.family"] = "Arial"
-
 # #%%---Find sessions that can be included into the analysis
 
 
-# #TODO: Consider also the performance of LO037, LO038, LY007, LO090 and LO091
 # #Find some defining exclusion criteria to remove other animals from the analysis, for example:
 # #Should have experienced all stimulus strengths, maybe also expert early withdrawal
 # #rate should not be higher than 0.5 overall and average number of trials performed per session
@@ -69,110 +69,122 @@ plt.rcParams["font.family"] = "Arial"
     
 #     all_animals_session_files.append(session_files)
     
-#%%---Function to extrac some (chipmunk) session metrics for specified subject
+# #%%---Function to extrac some (chipmunk) session metrics for specified subject
 
-def diagnose_performance(subject):
-    '''Get some performance metrics on the level of the subject and on individual
-    sessions to decide whether to keep this subject and include specific sessions.
+# def diagnose_performance(subject):
+#     '''Get some performance metrics on the level of the subject and on individual
+#     sessions to decide whether to keep this subject and include specific sessions.
     
-    ---------------------------------------------------------------------------'''
+#     ---------------------------------------------------------------------------'''
     
-    from chiCa import convert_specified_behavior_sessions
-    import pandas as pd
-    from labdatatools import get_labdata_preferences
-    import os
-    import subprocess
-    from glob import glob
-    from time import time
-    import numpy as np
+#     from chiCa import convert_specified_behavior_sessions
+#     import pandas as pd
+#     from labdatatools import get_labdata_preferences
+#     import os
+#     import subprocess
+#     from glob import glob
+#     from time import time
+#     import numpy as np
     
-    datatype = 'chipmunk'
+#     datatype = 'chipmunk'
     
-    start = time()
-    #Get a list of all the chipmunk sessions for the subject
-    #res = subprocess.check_output(f'labdata sessions {subject} -f {datatype}').decode().split("\n") #List all chipmunk sessions for this subject
-    res = subprocess.check_output(['labdata', 'sessions', subject, '-f', datatype]).decode().split("\n")
-    ses_list = []
-    for x in res:
-        if len(x) > 0:
-            if x[0]==" " and x[1:2]!="\t":
-                ses_list.append(x[1:])
+#     start = time()
+#     #Get a list of all the chipmunk sessions for the subject
+#     #res = subprocess.check_output(f'labdata sessions {subject} -f {datatype}').decode().split("\n") #List all chipmunk sessions for this subject
+#     res = subprocess.check_output(['labdata', 'sessions', subject, '-f', datatype]).decode().split("\n")
+#     ses_list = []
+#     for x in res:
+#         if len(x) > 0:
+#             if x[0]==" " and x[1:2]!="\t":
+#                 ses_list.append(x[1:])
     
-    #Go through the sessions, copy and convert if session is not dowloaded yet
-    #and extract some metrics
-    metrics = {'session': [],
-               'corrupted': [],
-               'modality': [],
-               'stim_strengths': [],
-               'revise_choice': [],
-               'wait_time': [],
-               'post_stim_delay': [],
-               'completed_trials': [],
-               'early_withdrawal_rate': [],
-               'performance_easy': [],
-               'extended_stim': []}
+#     #Go through the sessions, copy and convert if session is not dowloaded yet
+#     #and extract some metrics
+#     metrics = {'session': [],
+#                'corrupted': [],
+#                'modality': [],
+#                'stim_strengths': [],
+#                'revise_choice': [],
+#                'wait_time': [],
+#                'post_stim_delay': [],
+#                'completed_trials': [],
+#                'early_withdrawal_rate': [],
+#                'performance_easy': [],
+#                'extended_stim': []}
     
     
-    #Locate the data in folder
-    base_dir = get_labdata_preferences()['paths'][0]
-    for session in ses_list:
-        metrics['session'].append(session)
-        if len(glob(os.path.join(base_dir, subject, session, datatype, '*.mat'))) == 0: #Check if chipmunk file is there
-            subprocess.run(['labdata', 'get', subject, '-s', session, '-d', datatype, '-i', "*.mat"])
-        metrics['corrupted'].append(False) #Assume things are find with this mat file
-        if len(glob(os.path.join(base_dir, subject, session, datatype, '*.h5'))) == 0: #Check if converted h5 file is present
-            try:
-                _ = convert_specified_behavior_sessions([glob(os.path.join(base_dir, subject, session, datatype, '*.mat'))[0]])
-            except:
-                pass #Use pass here because if a matfile exists but there is some issue with the conversion it only throws a warning
-        if len(glob(os.path.join(base_dir, subject, session, datatype, '*.h5'))) == 0: #Check again whether a file exists now
-                metrics['corrupted'][-1] = True
-                metrics['modality'].append(None)
-                metrics['stim_strengths'].append([None])
-                metrics['revise_choice'].append(None)
-                metrics['wait_time'].append(None)
-                metrics['post_stim_delay'].append(None)
-                metrics['completed_trials'].append(None)
-                metrics['early_withdrawal_rate'].append(None)
-                metrics['performance_easy'].append(None)
-                metrics['extended_stim'].append(None)
-                continue #Skip to the next iteration if the file is broken
+#     #Locate the data in folder
+#     base_dir = get_labdata_preferences()['paths'][0]
+#     for session in ses_list:
+#         metrics['session'].append(session)
+#         if len(glob(os.path.join(base_dir, subject, session, datatype, '*.mat'))) == 0: #Check if chipmunk file is there
+#             subprocess.run(['labdata', 'get', subject, '-s', session, '-d', datatype, '-i', "*.mat"])
+#         metrics['corrupted'].append(False) #Assume things are find with this mat file
+#         if len(glob(os.path.join(base_dir, subject, session, datatype, '*.h5'))) == 0: #Check if converted h5 file is present
+#             try:
+#                 _ = convert_specified_behavior_sessions([glob(os.path.join(base_dir, subject, session, datatype, '*.mat'))[0]])
+#             except:
+#                 pass #Use pass here because if a matfile exists but there is some issue with the conversion it only throws a warning
+#         if len(glob(os.path.join(base_dir, subject, session, datatype, '*.h5'))) == 0: #Check again whether a file exists now
+#                 metrics['corrupted'][-1] = True
+#                 metrics['modality'].append(None)
+#                 metrics['stim_strengths'].append([None])
+#                 metrics['revise_choice'].append(None)
+#                 metrics['wait_time'].append(None)
+#                 metrics['post_stim_delay'].append(None)
+#                 metrics['completed_trials'].append(None)
+#                 metrics['early_withdrawal_rate'].append(None)
+#                 metrics['performance_easy'].append(None)
+#                 metrics['extended_stim'].append(None)
+#                 continue #Skip to the next iteration if the file is broken
         
-        #Extract some other metrics
-        trialdata = pd.read_hdf(glob(os.path.join(base_dir, subject, session, datatype, '*.h5'))[0])
-        metrics['revise_choice'].append(trialdata['revise_choice_flag'][0]) #Were animals allowed to change their mind?
+#         #Extract some other metrics
+#         trialdata = pd.read_hdf(glob(os.path.join(base_dir, subject, session, datatype, '*.h5'))[0])
+#         metrics['revise_choice'].append(trialdata['revise_choice_flag'][0]) #Were animals allowed to change their mind?
         
-        mods = np.unique(trialdata['stimulus_modality'].tolist())
-        if mods.shape[0] == 1:
-            metrics['modality'].append(mods[0])
-        elif mods.shape[0] > 1:
-            metrics['modality'].append('mixed')
+#         mods = np.unique(trialdata['stimulus_modality'].tolist())
+#         if mods.shape[0] == 1:
+#             metrics['modality'].append(mods[0])
+#         elif mods.shape[0] > 1:
+#             metrics['modality'].append('mixed')
         
-        stim_rate = [x.shape[0] for x in trialdata['stimulus_event_timestamps']]
-        metrics['stim_strengths'].append(np.unique(stim_rate))
-        try:
-            metrics['wait_time'].append(np.mean(trialdata['waitTime'])) #This is the time animals are required to wait
-        except:
-            metrics['wait_time'].append(np.mean(trialdata['actual_wait_time']))
-        try:
-            metrics['post_stim_delay'].append(np.mean(trialdata['postStimDelay'])>0) #This is true when a random delay was added
-        except:
-            metrics['post_stim_delay'].append(False) #If it is not specified rely on the wait time criterion alone.
-        metrics['completed_trials'].append(np.sum(np.isnan(trialdata['response_side'])==0)) #Number of completed trials
-        metrics['early_withdrawal_rate'].append(np.sum(trialdata['outcome_record']==-1)/trialdata.shape[0]) #Early withdrawal rate
-        easy_str = [np.min(np.unique(stim_rate)), np.max(np.unique(stim_rate))]
-        consider = ((stim_rate == easy_str[0]) | (stim_rate == easy_str[1])) & (np.isnan(trialdata['response_side'])==0)
-        metrics['performance_easy'].append(np.mean(trialdata['outcome_record'][consider]))
-        try:
-            metrics['extended_stim'].append(np.mean(trialdata['ExtraStimulusDuration']))
-        except:
-            metrics['extended_stim'].append(0) #Be conservative here and assume no extended stim if it can't be found
-    session_metrics = pd.DataFrame(metrics)
-    print(f'Computed session metrics for {subject} in {time() - start} seconds.')
-    print('-------------------------------------------------------------------')
-    return session_metrics
+#         stim_rate = [x.shape[0] for x in trialdata['stimulus_event_timestamps']]
+#         metrics['stim_strengths'].append(np.unique(stim_rate))
+#         try:
+#             metrics['wait_time'].append(np.mean(trialdata['waitTime'])) #This is the time animals are required to wait
+#         except:
+#             metrics['wait_time'].append(np.mean(trialdata['actual_wait_time']))
+#         try:
+#             metrics['post_stim_delay'].append(np.mean(trialdata['postStimDelay'])>0) #This is true when a random delay was added
+#         except:
+#             metrics['post_stim_delay'].append(False) #If it is not specified rely on the wait time criterion alone.
+#         metrics['completed_trials'].append(np.sum(np.isnan(trialdata['response_side'])==0)) #Number of completed trials
+#         metrics['early_withdrawal_rate'].append(np.sum(trialdata['outcome_record']==-1)/trialdata.shape[0]) #Early withdrawal rate
+#         easy_str = [np.min(np.unique(stim_rate)), np.max(np.unique(stim_rate))]
+#         consider = ((stim_rate == easy_str[0]) | (stim_rate == easy_str[1])) & (np.isnan(trialdata['response_side'])==0)
+#         metrics['performance_easy'].append(np.mean(trialdata['outcome_record'][consider]))
+#         try:
+#             metrics['extended_stim'].append(np.mean(trialdata['ExtraStimulusDuration']))
+#         except:
+#             metrics['extended_stim'].append(0) #Be conservative here and assume no extended stim if it can't be found
+#     session_metrics = pd.DataFrame(metrics)
+#     print(f'Computed session metrics for {subject} in {time() - start} seconds.')
+#     print('-------------------------------------------------------------------')
+#     return session_metrics
 
 #%%--Get the session metrics for a set (or all) the animals
+
+#Here, hte function will query the google drive with all the stored data using 
+#labdata-tools, download and convert the originally acquired .mat files for the 
+#behavior and extract a set of performance and task parameters that will be used
+#in the following to decide whether to include animals or not.
+#
+#Please be aware that this procedure is slow and might take several hours!
+#It is advised to save the list of performance metrics 
+#
+#Alternatively, a file with the metrics is provided with this repo and can be 
+#used to skip this step, see below
+
 #-------This might take a little moment!--------
 subjects = ['LO028', 'LO032', 'LO037', 'LO038', 'LO051', 'LO061', 'LO067',
             'LO068', 'LO069', 'LO071', 'LO073', 'LO074', 'LO090', 'LO091', 'LY007', 'LY008']
@@ -184,10 +196,22 @@ for subj in subjects:
 #---Extract a list of the relevant sessions by first getting the metrics for
 # all animals of interest and then filter their sessions 
 
+
+#----Alternative: Load existing file with animal sessions--------
+#A file with the subject metrics is provided within this repo (subject_metrics_dict) to allow users to
+#skip over the diagnosis process and avoid using labdata-tools as long as the data
+#are stored in the subject -> session -> datatype structure.
+
+## Here's how:
+#tmp = np.load('the path to my file', allow_pickle=True).tolist() # First load the file, it is a dictionary
+#subject_metrics = [tmp[k] for k in tmp.keys()] #Just restructure dict keys into list entries
+
+
+#%%---Apply the selection criteria
 include_sessions = [None] * len(subjects)
 for sub in range(len(subject_metrics)):
     session_metrics = subject_metrics[sub]
-    #1) Animals needs to have experienced 4, 6, 8, 10, 14, 16, 18, 20 Hz stims duringa a visual session
+    #1) Animals needs to have experienced 4, 6, 8, 10, 14, 16, 18, 20 Hz stims during a visual session
     req = [4, 6, 8, 10, 14, 16, 18, 20]
     has_all_strengths = np.zeros([session_metrics.shape[0]])
     for k in range(session_metrics['stim_strengths'].shape[0]):
@@ -199,7 +223,7 @@ for sub in range(len(subject_metrics)):
     wait_req = np.sum((session_metrics['wait_time'] >= 1.1)) > 1 #This is somewhat minimal because it might be another requirement later
     
     if stim_req and wait_req: #If this is fullfilled filter for sessions
-        #a) At least two different difficulties
+        #a) At least two pairs of different difficulties
         has_two_strengths = np.zeros([session_metrics.shape[0]])
         for k in range(session_metrics['stim_strengths'].shape[0]):
             has_two_strengths[k] = np.sum([x in session_metrics['stim_strengths'][k] for x in req]) >= 4
@@ -217,7 +241,7 @@ for sub in range(len(subject_metrics)):
         high_perf = np.sum(session_metrics['performance_easy']>0.8) > 0
         
         idx = np.where(has_two_strengths & is_visual & long_wait & has_extended & trial_crit & is_intact)[0]
-        if (idx.shape[0] >= 5) & (np.mean(session_metrics['early_withdrawal_rate'][idx])<0.55): #Make sure to at least get 5 sessions for the analyses
+        if (idx.shape[0] >= 5) & (np.mean(session_metrics['early_withdrawal_rate'][idx])<0.55): #Make sure to at least get 5 sessions for the analyses and that the early withdrawal rate is below 0.55 
             include_sessions[sub] = session_metrics['session'][idx].tolist()
 
 #%%------Extrac session-wise choices, stim_strengths,etc...
@@ -286,7 +310,10 @@ for sub in range(len(subject_metrics)):
 #%%----Go through the list of useful sessions and get the data
 
 subject_data = dict()
-base_dir = get_labdata_preferences()['paths'][0]
+base_dir = get_labdata_preferences()['paths'][0] #Retrieve the base directory
+## Alternatively set the base directory manualy:
+#base_dir = 'my base directory'
+
 for subj_idx in range(len(subjects)):
     if include_sessions[subj_idx] is not None:
         dat = pd.DataFrame()
@@ -298,9 +325,8 @@ for subj_idx in range(len(subjects)):
 #%%---Fit overall psychometric curves on all animals with valid trials
 
 ##########--------Fig. 1c----------######################
-save_to = 'C:/Users/Lukas Oesch/Documents/ChurchlandLab/Trial-history_manuscript/Figures'
 psy_models = []
-nx = np.linspace(4, 20, 100) #This is hard-coded here
+nx = np.linspace(4, 20, 100) #Specify the range of values for the curve reconstruction, 4 - 20 hz with 100 steps
 curve = []
 gray = '#858585'
 dict_keys = subject_data.keys()
@@ -308,9 +334,9 @@ for subj in dict_keys:
     dat = subject_data[subj]
    
     ft = PsychometricRegression(dat['choice'][dat['all_valid']], exog = dat['stim_strengths'][dat['all_valid']])
-    res = ft.fit(min_required_stim_values = 0, full_output=True)
-    curve.append(cumulative_gaussian(res.params[0], res.params[1], res.params[2], res.params[3], nx))
-    psy_models.append(res)
+    res = ft.fit(min_required_stim_values = 0, full_output=True) #Mode lfit with output reporting
+    curve.append(cumulative_gaussian(res.params[0], res.params[1], res.params[2], res.params[3], nx)) #Store reconstruction
+    psy_models.append(res) #Store psychometric parameters
     
 #Now the plotting
 all_curves = np.vstack(curve).T
@@ -325,65 +351,64 @@ ax.set_ylim([-0.03,1]) #Lower bound is just eyballed..
 separate_axes(ax)
 ax.set_xlabel('Stimulus rate (Hz)')
 ax.set_ylabel('Fraction right side choices')  
-fi.savefig(os.path.join(save_to,'Fig1c.svg'))
 
 #%%-----
-#----Function for wilson score confidence interval----
-def calculateWilsonScoreInterval(data):
-    ''' lowerBound, upperBound = calculateWilsonScoreInerval(data);
+# # #TODO: Put this function into chiCa
+
+
+# #----Function for wilson score confidence interval----
+# def calculateWilsonScoreInterval(data):
+#     ''' lowerBound, upperBound = calculateWilsonScoreInerval(data);
     
-    % Calculate the Wilson score confidence interval for binomial
-    % distributions. This confidence intervall as asymmetric, bounded by 0 and
-    % 1 and "pulls" towards 0.5. Currently, this function only handles an alpha
-    % level of 0.05.
-    % Fromula was drawn from:
-    % https://www.ucl.ac.uk/english-usage/staff/sean/resources/binomialpoisson.pdf
-    %
-    % INPUT: -data: A vector of 0s and 1s containing the observed outcomes.
-    %               Nans can be tolerated.
-    %
-    % OUTPUTS: -lowerBound/upperBound: The lower and upper bound of the
-    %                                  confidence interval.
-    %
-    % LO, 5/4/2021
-    %
-    %--------------------------------------------------------------------------'''
-    import numpy as np
-    p = np.nanmean(data) #take the average fo all the specified values
-    n = np.sum(np.isnan(data)==0) #number of valid observations
-    z = 1.95996 #the critical value for an alpha level of 0.05
+#     % Calculate the Wilson score confidence interval for binomial
+#     % distributions. This confidence intervall as asymmetric, bounded by 0 and
+#     % 1 and "pulls" towards 0.5. Currently, this function only handles an alpha
+#     % level of 0.05.
+#     % Fromula was drawn from:
+#     % https://www.ucl.ac.uk/english-usage/staff/sean/resources/binomialpoisson.pdf
+#     %
+#     % INPUT: -data: A vector of 0s and 1s containing the observed outcomes.
+#     %               Nans can be tolerated.
+#     %
+#     % OUTPUTS: -lowerBound/upperBound: The lower and upper bound of the
+#     %                                  confidence interval.
+#     %
+#     % LO, 5/4/2021
+#     %
+#     %--------------------------------------------------------------------------'''
+#     import numpy as np
+#     p = np.nanmean(data) #take the average fo all the specified values
+#     n = np.sum(np.isnan(data)==0) #number of valid observations
+#     z = 1.95996 #the critical value for an alpha level of 0.05
     
-    lowerBound = (p + z**2/(2*n) - z*np.sqrt(p*(1-p)/n + z**2/(4*n**2)))/(1 + z**2/n);
-    upperBound = (p + z**2/(2*n) + z*np.sqrt(p*(1-p)/n + z**2/(4*n**2)))/(1 + z**2/n);
+#     lowerBound = (p + z**2/(2*n) - z*np.sqrt(p*(1-p)/n + z**2/(4*n**2)))/(1 + z**2/n);
+#     upperBound = (p + z**2/(2*n) + z*np.sqrt(p*(1-p)/n + z**2/(4*n**2)))/(1 + z**2/n);
     
-    return lowerBound, upperBound
+#     return lowerBound, upperBound
 
 #%%--- Fit trial history dependent psychometric curves for each animal,
 # also show repsonse averages per stim strength with wilson score interval
 
-
 #######-----Fig 1d, pick LO074-------##################
 
-#Store the bias, sensitivity, upper- and lower lapses
+#Define a path to automatically save the plots - there will be one per animal
 save_to = 'C:/Users/Lukas Oesch/Documents/ChurchlandLab/Trial-history_manuscript/Figures/Fig1d_plots'
-#cols = ['#2f65d0', '#2fd0aa', '#d09a2f', '#d04a2f']
-cols = ['#606cbe', '#48a7b1', '#deb35e', '#de8468']
+cols = ['#606cbe', '#48a7b1', '#deb35e', '#de8468'] #Plotting color for different trial history contexts
 #--order is previous correct left, prev incorrect left, prev incorrect right, correct right
 
 psych_param = [[],[],[],[],[]]#Ugly!
-
-nx = np.linspace(4, 20, 100) #This is hard-coded here
+nx = np.linspace(4, 20, 100)  #Specify the range of values for the curve reconstruction, 4 - 20 hz with 100 steps
 
 dict_keys = subject_data.keys()
 for subj in dict_keys:
     dat = subject_data[subj]
 
     plc = dat['valid_past'] & ((dat['prior_choice']==0) & (dat['prior_outcome']==1)) #Previous correct left
-    pli = dat['valid_past'] & ((dat['prior_choice']==0) & (dat['prior_outcome']==0))
-    pri = dat['valid_past'] & ((dat['prior_choice']==1) & (dat['prior_outcome']==0))
+    pli = dat['valid_past'] & ((dat['prior_choice']==0) & (dat['prior_outcome']==0)) #Previous incorrect left
+    pri = dat['valid_past'] & ((dat['prior_choice']==1) & (dat['prior_outcome']==0)) #Previous incorrect right
     prc = dat['valid_past'] & ((dat['prior_choice']==1) & (dat['prior_outcome']==1)) #Previous correct right
    
-    conds = [plc, pli, pri, prc, dat['valid_past']] #All the different scenarios
+    conds = [plc, pli, pri, prc, dat['valid_past']] #All the different scenarios plus all the trials with a valid current and immediate past choice
     fi = plt.figure(figsize= [3.8,4.8])
     ax = fi.add_subplot(1,1,1)
     for k in range(len(conds)):
@@ -394,7 +419,7 @@ for subj in dict_keys:
         psych_param[k].append(res.params)
         curve = cumulative_gaussian(res.params[0], res.params[1], res.params[2], res.params[3], nx)
         
-        if k < 4:
+        if k < 4: #This is for all the trial history contexts
             av = []
             lower_bound = []
             upper_bound = []
@@ -413,8 +438,7 @@ for subj in dict_keys:
             
             ax.plot(nx, curve, color = cols[k])
             ax.errorbar(rates, av, yerr=[lower_bound, upper_bound], color = cols[k], fmt='o', markerfacecolor = 'w', capsize=4)
-            #ax.errorbar(rates, av, yerr=[lower_bound, upper_bound], color = cols[k], fmt='o', capsize=4, markeredgecolor= 'w')
-        elif k==4:
+        elif k==4: # This is for the overall curve
             ax.plot(nx, curve, color = 'k', linestyle='--')
    
     ax.plot([4,20],[0.5,0.5], linewidth=0.5, color = 'k', linestyle='--') #horizontal line
@@ -428,12 +452,12 @@ for subj in dict_keys:
           
     fi.savefig(os.path.join(save_to, subj + '.svg'))
 
-#%%-------Plot the psych weights for the different trial history contexts
+#%% Plot the psychometric parameter estimates for the different trial history contexts
 
 #----------This is for supplementary figure 1a, b, c and d
-save_to = 'C:/Users/Lukas Oesch/Documents/ChurchlandLab/Trial-history_manuscript/Figures/Supp_fig1_panels'
 psy_array = np.squeeze(psych_param).transpose(1,0,2) #Subjects x Trial history x parameter
 
+#Jitter the dots representing individual subjects 
 tmp = 0.5-np.random.rand(psy_array.shape[0])
 jitter = np.sign(tmp) * tmp**2
 
@@ -455,9 +479,8 @@ for k in range(len(titles)):
         ax.set_xlim([0,5])
         separate_axes(ax)
         
-        fi.savefig(os.path.join(save_to, titles[k] + '_by_trial_history.svg'))
-        
-#%%-------Arrange the data for lme_stats
+#%%-------Arrange the data for lme_stats and save to .csv
+
 save_to = '/Users/loesch/Documents/Churchland_lab/Trial-history_manuscript/Figures/Supp_fig1_panels_202050601'
 file_names = ['perceptual_bias', 'sensitivity','upper_lapse_rate', 'lower_lapse_rate']
 #psy_array dimensions are: Subjects x Trial history (plus one more condition whivch is all together) x parameter
@@ -471,11 +494,23 @@ for k in range(len(file_names)):
     
 #%%--------Compute the behavioral models with the trial history terms-----
 
+#Here we fit the animals' choices using a logistic regression of a bias term
+# (actually trial history-free 12 Hz stimulus), the stimulus strength, and a 
+# regressor for every trial history context. 
+
+# Note: These fits from the logistic regression will be saved to the 'analysis'
+# datatype folder within the current subject's session folder. Please make sure
+# that an analysis folder exists beofre running this part
+
+
 file_name = 'logreg_fig_one' #The name to the files for these models
-fit_models = False #Once they are computed they may also be loaded from their stored files
+fit_models = False #Set to True to fit and retain models, set to False if you want to load existing fits
 
 model_params = {'penalty': 'l2', 'inverse_regularization_strength': 1, 'solver': 'liblinear', 'fit_intercept': False, 'normalize': False}
-subsampling_rounds = 100
+# Note that we use the same regularization strength for all the models and do not optimize this parameter.
+# This is to make sure the weight magnitudes are similarly penalized between sessions and subjects and can be compared.
+# Of further note: We add a column of 1s to the design matrix and hence set fit_intercept to false
+subsampling_rounds = 100 #Number of repeated subsamplings from the majority class(es).
 secondary_labels = None
 k_folds = 10
 subjects_logreg = dict()
