@@ -321,7 +321,7 @@ for subj_idx in range(len(subjects)):
             tmp = get_chipmunk_behavior(os.path.join(base_dir, subjects[subj_idx], ses))
             dat = pd.concat([dat, tmp], axis=0)
         subject_data[subjects[subj_idx]] = dat
-        
+
 #%%---Fit overall psychometric curves on all animals with valid trials
 
 ##########--------Fig. 1c----------######################
@@ -566,11 +566,19 @@ for subj in subject_data.keys():
     subjects_logreg[subj] = tmp
     
         
-#%%-------Fit main effects models too and especially models with multiple trials back
+#%%-------Fit main effects models andmodels with two trials  back
 
+# Fit models where the different trial history regressors are not partitioned, that is,
+# there is a previous choice regressor, a previous correct side regressor (WSLS) and one for 
+# their interaction. Since previous right side choice and right side stimulus are modeled as ones
+# the intercept in this model effectively reflectsthe animals biases after a previous correct left
+# choice.
+# The two trial back version of the model is an extended version of the main effects model also
+# containing choice, correct side and their interaction form two trials back.
+# Please note that due to early withdrawals the number of trials that have a consecutive history
+# of valid trials decreases the farther in the past trials are included.
 
 #------------Supplementary figure 1 
-
 file_names = ['main_effects_logreg_suppfig_one', 'main_effects_logreg_twoback_suppfig_one'] #The name to the files for these models
 fit_models = False #Once they are computed they may also be loaded from their stored files
 
@@ -889,6 +897,7 @@ session_performance = []
 history_strength = []
 stim_coef = []
 tmp_subj = []
+includes_difficult = []
 for subj in subject_data.keys():
     
     dat = subjects_logreg[subj]
@@ -899,10 +908,12 @@ for subj in subject_data.keys():
     
     dat = subject_data[subj]
     tmp_perf = []
+    tmp_difficult = []
     for ses in sessions:
         tmp_perf.append(np.mean(dat['outcome'][dat['valid_past'] & (dat['session']==ses)]))
+        tmp_difficult.append(np.sum([(x >= 8) and (x <= 16) for x in subject_metrics[np.where(np.array(subjects)==subj)[0][0]]['stim_strengths'][subject_metrics[np.where(np.array(subjects)==subj)[0][0]]['session']==ses].tolist()[0]]) > 0)
     session_performance.append(np.squeeze(tmp_perf))
-
+    includes_difficult.append(tmp_difficult)
 
 #Prep data frame for LME
 d_dict = dict()
@@ -943,13 +954,127 @@ x_vect = np.arange(lims[0],lims[1],0.01)
 regression_line = 0.744872 + (-0.055290 * x_vect)
 
 
+# gray = '#858585'
+# line_col = '#710909'
+# #Try plotting the difference between the stimulus weight and the trial history strength
+# fi = plt.figure(figsize=[4.8,4.8])
+# ax = fi.add_subplot(111)
+# sc = ax.scatter(np.hstack(history_strength) - np.hstack(stim_coef), np.hstack(session_performance), c=gray, edgecolor='w', linewidth=0.5)
+# ax.plot(x_vect, regression_line, color=line_col)
+# ax.set_ylim([0.5,1])
+# separate_axes(ax)
+# corr, p_val = pearsonr(np.hstack(history_strength) - np.hstack(stim_coef), np.hstack(session_performance))
+
+#---Color-coded version of the plot above
 gray = '#858585'
-line_col = '#710909'
+line_col = 'k'
 #Try plotting the difference between the stimulus weight and the trial history strength
+subj_code = np.zeros([df.shape[0]]) * np.nan
+for k in range(np.unique(df['subject']).shape[0]):
+    subj_code[df['subject'] == np.unique(df['subject'])[k]] = k
+tmp_colors = [cm.Spectral(x / (len(subject_data.keys()) - 1)) for x in range(len(subject_data.keys()))]
+subj_colors = np.vstack([[tmp_colors[x]] * len(history_strength[x]) for x in range(len(history_strength))])
+
 fi = plt.figure(figsize=[4.8,4.8])
 ax = fi.add_subplot(111)
-sc = ax.scatter(np.hstack(history_strength) - np.hstack(stim_coef), np.hstack(session_performance), c=gray, edgecolor='w', linewidth=0.5)
+sc = ax.scatter(np.hstack(history_strength) - np.hstack(stim_coef), np.hstack(session_performance), c=subj_colors, cmap=cm.Spectral, edgecolor='w', linewidth=0.5)
 ax.plot(x_vect, regression_line, color=line_col)
 ax.set_ylim([0.5,1])
 separate_axes(ax)
 corr, p_val = pearsonr(np.hstack(history_strength) - np.hstack(stim_coef), np.hstack(session_performance))
+
+
+
+
+
+#Reviewer comment: exclude high hist strength mouse
+anim_idx = np.argmax([np.mean(x) for x in history_strength]) #The mouse is LY008 the last in the list
+#Since the mouse is the last one we can simply index into the list
+no_LY008 = subj_code!=anim_idx
+
+#Use the regression coefficients from the lme to fit the line
+lims = [np.min(df['hist_stim_coef_delta']), np.max(df['hist_stim_coef_delta'])]
+lims = np.round(lims, decimals=1)
+x_vect = np.arange(lims[0],lims[1],0.01)
+regression_line = 0.734097 + (-0.065992 * x_vect)
+
+#Try plotting the difference between the stimulus weight and the trial history strength
+fi = plt.figure(figsize=[4.8,4.8])
+ax = fi.add_subplot(111)
+sc = ax.scatter(np.hstack(history_strength)[no_LY008] - np.hstack(stim_coef)[no_LY008], np.hstack(session_performance)[no_LY008], c=subj_colors[no_LY008], edgecolor='w', linewidth=0.5)
+ax.plot(x_vect, regression_line, color=line_col)
+ax.set_ylim([0.5,1])
+separate_axes(ax)
+corr, p_val = pearsonr(np.hstack(history_strength)[no_LY008] - np.hstack(stim_coef)[no_LY008], np.hstack(session_performance)[no_LY008])
+
+#Now also look at sessions where the mice saw more stim strengths vs relatively easy only sessions
+difficult_sessions = np.hstack(includes_difficult)
+titles = ['Only easy', 'Includes difficult']
+subj_code = np.zeros([df.shape[0]]) * np.nan
+for k in range(np.unique(df['subject']).shape[0]):
+    subj_code[df['subject'] == np.unique(df['subject'])[k]] = k
+
+axes = []
+for k in [0,1]:
+    fi = plt.figure(figsize=[4.8,4.8])
+    axes.append(fi.add_subplot(111))
+    sc = axes[k].scatter(np.hstack(history_strength)[difficult_sessions==k] - np.hstack(stim_coef)[difficult_sessions==k], np.hstack(session_performance)[difficult_sessions==k], c=subj_colors[difficult_sessions==k], edgecolor='w', linewidth=0.5)
+    axes[k].set_ylim([0.5,1])
+    axes[k].set_title(titles[k])
+    corr, p_val = pearsonr(np.hstack(history_strength)[difficult_sessions==k] - np.hstack(stim_coef)[difficult_sessions==k], np.hstack(session_performance)[difficult_sessions==k])
+    print(f'{titles[k]} : r = {corr}, p = {p_val}')
+
+x_min, x_max = np.min([x.get_xlim()[0] for x in axes]), np.max([x.get_xlim()[1] for x in axes])
+[x.set_xlim([x_min, x_max]) for x in axes]
+[separate_axes(x) for x in axes]
+
+
+#%%----Get the general stats for these behavioral sessions for supplementary table 1
+
+supp_table_one = {'subject': [],
+          'stimulus_modality': [],
+          'session_number': [],
+          'number_with_full_stim': [],
+          'performance_on_easy': [],
+          'valid_trials': [],
+          'early_withdrawal_rate': [],
+          'no_choice_trials': [],
+          'history_strength': []
+          }
+mod_ids = ['visual', 'auditory', 'multisensory'] #The corresponding codes are 0 = visual, 1 = auditory, 2 = multisensory
+full_stim_set = [4, 6 ,8, 10, 14, 16, 18, 20] # These stims have to be present for the session to count as a full
+
+for n in range(len(include_sessions)): #Loop through all the subjects
+    if include_sessions[n] is not None:
+        #tmp_modality = [] #Soooo ugly!
+        tmp_ses_full_stim = []
+        tmp_perf = []
+        tmp_val = []
+        tmp_early = []
+        tmp_no_choice = []
+       
+        for session in include_sessions[n]:
+            
+            # #First confirm that the modality is the same
+            # tmp_modality.append(subject_metrics[n]['modality'][subject_metrics[n]['session']==session].tolist()[0])
+            #Check for the full stim set in the list of ocurring stm
+            tmp_ses_full_stim.append(np.sum([x not in subject_metrics[n]['stim_strengths'][subject_metrics[n]['session']==session].tolist()[0].tolist() for x in full_stim_set]) == 0)
+            tmp_perf.append(subject_metrics[n]['performance_easy'][subject_metrics[n]['session']==session].tolist()[0])
+            tmp_early.append(subject_metrics[n]['early_withdrawal_rate'][subject_metrics[n]['session']==session].tolist()[0])
+            
+            beh = get_chipmunk_behavior(os.path.join(base_dir,subjects[n], session))
+            tmp_val.append(np.sum(beh['valid_past'])) #This is the number of trials we actually consider ofr the analyses
+            tmp_no_choice.append(np.sum(beh['no_choice_trial']))
+            tmp_hist_str.append(np.sqrt(np.sum((subjects_logreg[subjects[n]]['logreg_weights'][:,2:])**2,axis=1)))
+            
+        supp_table_one['subject'].append(subjects[n])
+        supp_table_one['stimulus_modality'].append(subject_metrics[n]['modality'][subject_metrics[n]['session']==include_sessions[n][0]].tolist()[0])
+        supp_table_one['session_number'].append(len(include_sessions[n]))
+        supp_table_one['number_with_full_stim'].append(np.sum(tmp_ses_full_stim))
+        supp_table_one['performance_on_easy'].append(np.mean(tmp_perf))
+        supp_table_one['valid_trials'].append(np.mean(tmp_val))
+        supp_table_one['early_withdrawal_rate'].append(np.mean(tmp_early))
+        supp_table_one['no_choice_trials'].append(np.mean(tmp_no_choice))
+        supp_table_one['history_strength'].append(np.mean(np.sqrt(np.sum((subjects_logreg[subjects[n]]['logreg_weights'][:,2:])**2,axis=1))))
+
+supp_table_one = pd.DataFrame(supp_table_one)        

@@ -648,4 +648,41 @@ for co in range(len(coordinates)):
         #ax.invert_xaxis()
     
 
+#------------------------------------------------------------------------------
+#%% For supplementary table 2 get the session metrics
 
+#Get a chronological sorting for the sessions within subjects
+ordering = []
+session_dates = np.array([os.path.split(x)[1] for x in sessions])
+for k in np.unique(subj_code):
+    target_ses = np.array(session_dates)[subj_code==k]
+    for n in target_ses:
+        ordering.append(np.where(session_dates == n)[0][0])
+
+d_dict = {'subject': [],
+          'session': [],
+        'neuron_number': [],
+          'stim_rates': [],
+          'performance_easy': [],
+          'valid_trials': [],
+          'early_withdrawals': [],
+          'no_choice': [],
+          'hist_strength': []}
+
+for k in ordering:
+    d_dict['subject'].append(subj_string[k])
+    d_dict['session'].append(session_dates[k])
+    
+    tmp = get_chipmunk_behavior(sessions[k])
+    d_dict['stim_rates'].append(np.unique(tmp['stim_strengths']).tolist())
+    d_dict['performance_easy'].append(np.mean(tmp['outcome'][tmp['easy_stim'] & tmp['valid_past']]))
+    d_dict['valid_trials'].append(np.sum(tmp['valid_past']))
+    d_dict['early_withdrawals'].append(np.mean(tmp['early_withdrawal']))
+    d_dict['no_choice'].append(np.sum(tmp['no_choice_trial']))
+    
+    d_dict['hist_strength'].append(history_strength_dec[k])
+    
+    enc = np.load(os.path.join(sessions[k], 'analysis', encoding_model_name),allow_pickle = True).tolist()
+    d_dict['neuron_number'].append(enc['r_squared'][0].shape[0])
+    
+df = pd.DataFrame(d_dict)

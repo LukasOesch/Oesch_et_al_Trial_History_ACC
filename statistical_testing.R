@@ -7,19 +7,19 @@ library(emmeans)
 #Define the base directory for all the analysis files
 base_dir <- "/Users/loesch/Documents/Churchland_lab/Trial-history_manuscript/data_tables"
 
-# --------------Figure 1E----------------------------------------
+# --------------Figure 1F----------------------------------------
 # Comparing the magnitudes of the model weights to the shuffled control
-data <- read.csv(file.path(base_dir, "Fig1E_logreg_weights.csv"), header=TRUE, sep=",")
+data <- read.csv(file.path(base_dir, "Fig1F_logreg_weights.csv"), header=TRUE, sep=",")
 data$is_shuffle <- relevel(factor(data$is_shuffle), ref="shuffle")
 fit <- lmerTest::lmer(abs_logreg_weights ~ regressor * is_shuffle +  (1 |subject), data = data) 
 summary(fit) #
 emm = emmeans(fit, specs = pairwise ~ is_shuffle | regressor, pbkrtest.limit = 4272)
-summary(emm)
+summary(emm, by=NULL, adjust = "sidak")
 
-# -------------Figure 1G-----------------------------------------
+# -------------Figure 1H-----------------------------------------
 # Fitting linear relationship between the difference between history strength
 # and stimulus weight, and performance 
-data <- read.csv(file.path(base_dir, "Fig1G_hist_delta_vs_performance.csv"), header=TRUE, sep=",")
+data <- read.csv(file.path(base_dir, "Fig1H_hist_delta_vs_performance.csv"), header=TRUE, sep=",")
 fit <- lmerTest::lmer(performance ~ hist_stim_coef_delta + (1 |subject), data = data, REML=FALSE) 
 summary(fit)
 
@@ -36,7 +36,7 @@ data <- read.csv(file.path(base_dir, "Fig2G_class_wise_decoding_accuracy.csv"), 
 fit <- lmerTest::lmer(accuracy ~ history_context * time + (1 |subject/session), data = data, REML=FALSE) 
 summary(fit)
 emm = emmeans(fit, specs = pairwise ~ history_context | time, pbkrtest.limit = 12236)
-summary(emm)
+summary(emm, by = NULL, adjust = "sidak")
 
 # ------------Figure 2J-----------------------------------------------
 # Compare cross-decoding accuracy with shuffled control
@@ -47,7 +47,7 @@ data$phase <- relevel(factor(data$phase), ref="Early ITI") #Phase is the testing
 fit <- lmerTest::lmer(accuracy ~ seed*phase*condition + (1  |subject/session), data = data, REML=FALSE) 
 summary(fit)
 emm = emmeans(fit, specs = pairwise ~ condition | seed*phase)
-summary(emm)
+summary(emm, by = NULL, adjust = "sidak")
 
 # -----------Figure 4D------------------------------------------------
 #Compare the dimensionality of trial history, chest and video encoding
@@ -56,7 +56,7 @@ data$regressor <- relevel(factor(data$regressor), ref="previous_choice_outcome_c
 fit <- lmerTest::lmer(dimensionality ~ regressor +  (1 |subject/session), data = data, REML = FALSE) #Here regressor refers to chest, trial history, etc
 summary(fit)
 emm = emmeans(fit, specs = pairwise ~ regressor )
-summary(emm)
+summary(emm, by = NULL, adjust = "sidak")
 
 # -----------Figure 4G-----------------------------------------------
 #Compare the within- and across subject procrustes distances for trial history, chest and video
@@ -66,7 +66,7 @@ data$condition <- relevel(factor(data$condition), ref="within")
 fit <- lmerTest::lmer(procrustes_distance ~ regressor * condition + (1 |subject), data = data, REML = FALSE) 
 summary(fit)
 emm = emmeans(fit, specs = pairwise ~ regressor *condition)
-summary(emm)
+summary(emm, by = NULL, adjust = "sidak")
 
 # ------------Supplementary Figure 1A----------------------------------
 # Perceptual bias
@@ -74,7 +74,7 @@ data <- read.csv(file.path(base_dir, "Supplementary_Fig1A_perceptual_bias.csv"),
 fit <- lmerTest::lmer(param_estimate ~ trial_history + (1 |subject), data = data, REML=FALSE) 
 summary(fit)
 emm = emmeans(fit, specs = pairwise ~ trial_history)
-summary(emm)
+summary(emm, by = NULL, adjust = "sidak")
 
 # ------------Supplementary Figure 1B----------------------------------
 # Sensitivity
@@ -106,12 +106,40 @@ data$regressor <- relevel(factor(data$regressor), ref="intercept")
 fit <- lmerTest::lmer(abs_logreg_weights ~ regressor * is_shuffle +  (1 |subject), data = data) 
 summary(fit)
 emm = emmeans(fit, specs = pairwise ~ regressor | is_shuffle, pbkrtest.limit = 5632)
-summary(emm)
+summary(emm, by = NULL, adjust = "sidak")
 
 #------------Supplementary Figure 2B----------------------------------------------
 data <- read.csv(file.path(base_dir, "Supplementary_Fig2_decoding_accuracy_different_decoders.csv"), header=TRUE, sep=",")
 fit <- lmerTest::lmer(accuracy ~ decoded_variable * is_history + (1 |subject/session), data = data, REML = FALSE)
 summary(fit)
+
+#------------Supplementary Figure 2C----------------------------------------------
+data <- read.csv(file.path(base_dir, "Supplementary_Fig2C_stim_phase_decoding_accuracy_by_ITI_duration.csv"), header=TRUE, sep=",")
+data$condition <- relevel(factor(data$condition), ref = "Shuffle")  
+fit <- lmerTest::lmer(decoding_accuracy ~ condition * ITI_bin + (1 | subject/session), data = data, REML=FALSE) 
+summary(fit)
+emm = emmeans(fit, specs = pairwise ~ condition | ITI_bin)
+summary(emm, by = NULL, adjust = "sidak")
+
+#------------Supplementary Figure 2D----------------------------------------------
+data <- read.csv(file.path(base_dir, "Supplementary_Fig2D_Stim_phase_decoding_accuracy_by_ITI_duration_hist_context.csv"), header=TRUE, sep=",")
+fit <- lmerTest::lmer(decoding_accuracy ~ hist_context * ITI_bin + (1 | subject/session), data = data, REML=FALSE) 
+summary(fit)
+emm = emmeans(fit, specs = pairwise ~ hist_context | ITI_bin)
+summary(emm, by = NULL, adjust = "sidak")
+
+#------------Supplementary Figure 2E----------------------------------------------
+data <- read.csv(file.path(base_dir, "Supplementary_Fig2E_history_decoding_t-2_overall.csv"), , header=TRUE, sep=",")
+data$condition <- relevel(factor(data$condition), ref = "Shuffle")  
+fit <- lmerTest::lmer(decoding_accuracy ~ condition * time + (1 | subject/session), data = data, REML=FALSE) 
+summary(fit)
+
+#------------Supplementary Figure 2F----------------------------------------------
+data <- read.csv(file.path(base_dir, "Supplementary_Fig2F_history_decoding_t-2_by_context.csv"), header=TRUE, sep=",")
+fit <- lmerTest::lmer(decoding_accuracy ~ hist_context * time + (1 | subject/session), data = data, REML=FALSE) 
+summary(fit)
+emm = emmeans(fit, specs = pairwise ~ hist_context | time, pbkrtest.limit = 11172)
+summary(emm, by = NULL, adjust = "sidak")
 
 # -----------Supplementary Figure 5B and E---------------------------------------
 data <- read.csv(file.path(base_dir, "Supplementary_Fig5.csv"), header=TRUE, sep=",")
