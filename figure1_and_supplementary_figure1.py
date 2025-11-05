@@ -198,7 +198,7 @@ for subj in subjects:
 
 
 #----Alternative: Load existing file with animal sessions--------
-#A file with the subject metrics is provided within this repo (subject_metrics_dict) to allow users to
+#A file with the subject metrics is provided within this repo (subject_metrics) to allow users to
 #skip over the diagnosis process and avoid using labdata-tools as long as the data
 #are stored in the subject -> session -> datatype structure.
 
