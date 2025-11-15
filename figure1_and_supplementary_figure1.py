@@ -19,158 +19,11 @@ from labdatatools import * #Make sure to have labdata-tools installed and the da
 import os
 from glob import glob
 from scipy.ndimage import gaussian_filter1d
+
 # Add the path to the location containing the code for psychometric fits - please adapt to your specific path
 import sys
 sys.path.append('/Users/loesch/Documents/Churchland_lab/fit_psychometric/fit_psychometric')
 from analysis import *
-
-
-# #%%---Find sessions that can be included into the analysis
-
-
-# #Find some defining exclusion criteria to remove other animals from the analysis, for example:
-# #Should have experienced all stimulus strengths, maybe also expert early withdrawal
-# #rate should not be higher than 0.5 overall and average number of trials performed per session
-# #should be higher than ~250?
-
-
-# fetch_and_convert = False #Assumes the data were already downloaded before
-
-# subjects = ['LO032', 'LO051', 'LY008', 'LO068', 'LO028', 'LO061', 'LO069', 'LO067', 'LO071', 'LO073', 'LO074']
-# use_sessions = [np.hstack((np.arange(110), np.arange(245,246), np.arange(247,258,2), np.arange(260,261), np.arange(263,276,2))), #For LO032 the sessions are interleaved with observations, the mouse is learning the auditory
-#                           np.arange(0, 158), #LO051
-#                           np.hstack((np.arange(0,122), np.arange(123,162))), #LY008, All audio-visual sessions excluded, one sessions with missing data is also excluded
-#                           np.hstack((np.arange(5,89), np.arange(90, 101))), #LO068, All audio-visual sessions excluded, exclude spotlight in the beginning
-#                           np.hstack((np.arange(0,109), np.arange(160, 174), np.arange(175,176), np.arange(178, 182), np.arange(183, 206, 2))), #LO028, Exclude interleaved observer sessions
-#                           np.hstack((np.arange(5, 117), np.arange(118,124))), #LO061, Exclude spotlight sessions in the beginning
-#                           np.arange(4, 133), #LO069, Exclude spotlight sessions
-#                           np.hstack((np.arange(5,53), np.arange(55,214))), #LO067, exclude spotlight
-#                           np.arange(0, 68), #LO071, Exclude sessions with less than 1 s extended stim here
-#                           np.arange(0, 69), #LO073, Exclclude sessions with less than 1 s extended stim time
-#                           np.arange(0, 70) #LO074, Exclude sessions with less than 1 s extended stim time
-#                                      ]
-
-# all_animals_session_files = []
-# for subj in range(len(subjects)):
-#     ses = rclone_list_sessions(subjects[subj])
-    
-#     if fetch_and_convert:
-#         session_matfiles = []
-#         for curr_ses in ses[use_sessions[subj]]:
-#             exec_str = 'labdata get ' + subjects[subj] + ' -s ' + curr_ses + ' -d chipmunk -i "*.mat"' # *.avi needs to be between double quotes!
-#             subprocess.run(exec_str)
-#             session_matfiles.append(glob(os.path.join('C:\\data', subjects[subj], curr_ses, 'chipmunk', '*.mat'))[0])
-        
-#         session_files = convert_specified_behavior_sessions(session_matfiles)
-#     else:
-#         session_files = []
-#         for curr_ses in ses[use_sessions[subj]]:
-#             session_files.append(glob(os.path.join('C:/data', subjects[subj], curr_ses, 'chipmunk', '*.h5'))[0])
-    
-#     all_animals_session_files.append(session_files)
-    
-# #%%---Function to extrac some (chipmunk) session metrics for specified subject
-
-# def diagnose_performance(subject):
-#     '''Get some performance metrics on the level of the subject and on individual
-#     sessions to decide whether to keep this subject and include specific sessions.
-    
-#     ---------------------------------------------------------------------------'''
-    
-#     from chiCa import convert_specified_behavior_sessions
-#     import pandas as pd
-#     from labdatatools import get_labdata_preferences
-#     import os
-#     import subprocess
-#     from glob import glob
-#     from time import time
-#     import numpy as np
-    
-#     datatype = 'chipmunk'
-    
-#     start = time()
-#     #Get a list of all the chipmunk sessions for the subject
-#     #res = subprocess.check_output(f'labdata sessions {subject} -f {datatype}').decode().split("\n") #List all chipmunk sessions for this subject
-#     res = subprocess.check_output(['labdata', 'sessions', subject, '-f', datatype]).decode().split("\n")
-#     ses_list = []
-#     for x in res:
-#         if len(x) > 0:
-#             if x[0]==" " and x[1:2]!="\t":
-#                 ses_list.append(x[1:])
-    
-#     #Go through the sessions, copy and convert if session is not dowloaded yet
-#     #and extract some metrics
-#     metrics = {'session': [],
-#                'corrupted': [],
-#                'modality': [],
-#                'stim_strengths': [],
-#                'revise_choice': [],
-#                'wait_time': [],
-#                'post_stim_delay': [],
-#                'completed_trials': [],
-#                'early_withdrawal_rate': [],
-#                'performance_easy': [],
-#                'extended_stim': []}
-    
-    
-#     #Locate the data in folder
-#     base_dir = get_labdata_preferences()['paths'][0]
-#     for session in ses_list:
-#         metrics['session'].append(session)
-#         if len(glob(os.path.join(base_dir, subject, session, datatype, '*.mat'))) == 0: #Check if chipmunk file is there
-#             subprocess.run(['labdata', 'get', subject, '-s', session, '-d', datatype, '-i', "*.mat"])
-#         metrics['corrupted'].append(False) #Assume things are find with this mat file
-#         if len(glob(os.path.join(base_dir, subject, session, datatype, '*.h5'))) == 0: #Check if converted h5 file is present
-#             try:
-#                 _ = convert_specified_behavior_sessions([glob(os.path.join(base_dir, subject, session, datatype, '*.mat'))[0]])
-#             except:
-#                 pass #Use pass here because if a matfile exists but there is some issue with the conversion it only throws a warning
-#         if len(glob(os.path.join(base_dir, subject, session, datatype, '*.h5'))) == 0: #Check again whether a file exists now
-#                 metrics['corrupted'][-1] = True
-#                 metrics['modality'].append(None)
-#                 metrics['stim_strengths'].append([None])
-#                 metrics['revise_choice'].append(None)
-#                 metrics['wait_time'].append(None)
-#                 metrics['post_stim_delay'].append(None)
-#                 metrics['completed_trials'].append(None)
-#                 metrics['early_withdrawal_rate'].append(None)
-#                 metrics['performance_easy'].append(None)
-#                 metrics['extended_stim'].append(None)
-#                 continue #Skip to the next iteration if the file is broken
-        
-#         #Extract some other metrics
-#         trialdata = pd.read_hdf(glob(os.path.join(base_dir, subject, session, datatype, '*.h5'))[0])
-#         metrics['revise_choice'].append(trialdata['revise_choice_flag'][0]) #Were animals allowed to change their mind?
-        
-#         mods = np.unique(trialdata['stimulus_modality'].tolist())
-#         if mods.shape[0] == 1:
-#             metrics['modality'].append(mods[0])
-#         elif mods.shape[0] > 1:
-#             metrics['modality'].append('mixed')
-        
-#         stim_rate = [x.shape[0] for x in trialdata['stimulus_event_timestamps']]
-#         metrics['stim_strengths'].append(np.unique(stim_rate))
-#         try:
-#             metrics['wait_time'].append(np.mean(trialdata['waitTime'])) #This is the time animals are required to wait
-#         except:
-#             metrics['wait_time'].append(np.mean(trialdata['actual_wait_time']))
-#         try:
-#             metrics['post_stim_delay'].append(np.mean(trialdata['postStimDelay'])>0) #This is true when a random delay was added
-#         except:
-#             metrics['post_stim_delay'].append(False) #If it is not specified rely on the wait time criterion alone.
-#         metrics['completed_trials'].append(np.sum(np.isnan(trialdata['response_side'])==0)) #Number of completed trials
-#         metrics['early_withdrawal_rate'].append(np.sum(trialdata['outcome_record']==-1)/trialdata.shape[0]) #Early withdrawal rate
-#         easy_str = [np.min(np.unique(stim_rate)), np.max(np.unique(stim_rate))]
-#         consider = ((stim_rate == easy_str[0]) | (stim_rate == easy_str[1])) & (np.isnan(trialdata['response_side'])==0)
-#         metrics['performance_easy'].append(np.mean(trialdata['outcome_record'][consider]))
-#         try:
-#             metrics['extended_stim'].append(np.mean(trialdata['ExtraStimulusDuration']))
-#         except:
-#             metrics['extended_stim'].append(0) #Be conservative here and assume no extended stim if it can't be found
-#     session_metrics = pd.DataFrame(metrics)
-#     print(f'Computed session metrics for {subject} in {time() - start} seconds.')
-#     print('-------------------------------------------------------------------')
-#     return session_metrics
 
 #%%--Get the session metrics for a set (or all) the animals
 
@@ -208,6 +61,7 @@ for subj in subjects:
 
 
 #%%---Apply the selection criteria
+
 include_sessions = [None] * len(subjects)
 for sub in range(len(subject_metrics)):
     session_metrics = subject_metrics[sub]
@@ -244,69 +98,6 @@ for sub in range(len(subject_metrics)):
         if (idx.shape[0] >= 5) & (np.mean(session_metrics['early_withdrawal_rate'][idx])<0.55): #Make sure to at least get 5 sessions for the analyses and that the early withdrawal rate is below 0.55 
             include_sessions[sub] = session_metrics['session'][idx].tolist()
 
-#%%------Extrac session-wise choices, stim_strengths,etc...
-
-# def get_chipmunk_behavior(data_source):
-#     '''Retrieve animal behavior information including previous choices and
-#     outcomes, stim strengths, easy stims, etc.
-#     '''
-    
-#     import numpy as np
-#     import pandas as pd
-#     from glob import glob
-#     import os
-#     from chiCa import load_trialdata, determine_prior_variable
-    
-#     #Load the trialdata
-#     if isinstance(data_source, str):
-#         if len(glob(session_dir + '/chipmunk/*.h5')) == 1:
-#             trialdata = pd.read_hdf(glob(session_dir + '/chipmunk/*.h5')[0], '/Data')
-#         elif len(glob(session_dir + '/chipmunk/*.mat')) == 1:
-#             trialdata = load_trialdata(glob(session_dir + '/chipmunk/*.mat')[0])
-#         else:
-#             raise RuntimeError(f"Can't find a behavioral file in {session_dir}")
-#     elif isinstance(data_source, pd.DataFrame):
-#         trialdata = data_source
-     
-#     #Get the data   
-#     out_dict = dict()
-#     out_dict['choice']  = np.array(trialdata['response_side'])
-#     out_dict['category'] = np.array(trialdata['correct_side'])
-#     out_dict['prior_choice'] =  determine_prior_variable(np.array(trialdata['response_side']), np.ones(len(trialdata)), 1, 'consecutive')
-#     out_dict['prior_category'] =  determine_prior_variable(np.array(trialdata['correct_side']), np.ones(len(trialdata)), 1, 'consecutive')
-    
-#     out_dict['outcome'] = np.array(trialdata['response_side'] == trialdata['correct_side'], dtype=float) #Define as float so that nans (that are float) can be retained later
-#     out_dict['outcome'][np.array(np.isnan(trialdata['response_side']))] = np.nan
-#     out_dict['prior_outcome'] =  determine_prior_variable(out_dict['outcome'], np.ones(len(trialdata)), 1, 'consecutive')
-       
-#     modality = np.zeros([trialdata.shape[0]])
-#     modality[trialdata['stimulus_modality'] == 'auditory'] = 1
-#     modality[trialdata['stimulus_modality'] == 'audio-visual'] = 2
-#     out_dict['modality'] = modality
-#     out_dict['prior_modality'] = determine_prior_variable(modality, np.ones(len(trialdata)), 1, 'consecutive')
-    
-#     #Find stimulus strengths
-#     tmp_stim_strengths = np.zeros([trialdata.shape[0]], dtype=int) #Filter to find easiest stim strengths
-#     for k in range(trialdata.shape[0]):
-#         tmp_stim_strengths[k] = trialdata['stimulus_event_timestamps'][k].shape[0]
-#     out_dict['stim_strengths'] = tmp_stim_strengths
-    
-#     #Get category boundary to normalize the stim strengths
-#     unique_freq = np.unique(tmp_stim_strengths)
-#     category_boundary = (np.min(unique_freq) + np.max(unique_freq))/2
-#     stim_strengths = (tmp_stim_strengths- category_boundary) / (np.max(unique_freq) - category_boundary)
-#     if trialdata['stimulus_modality'][0] == 'auditory':
-#         stim_strengths = stim_strengths * -1
-#     out_dict['relative_stim_strengths'] = stim_strengths
-#     out_dict['easy_stim'] = np.abs(stim_strengths) == 1 #Either extreme
-    
-#     out_dict['all_valid'] = np.isnan(out_dict['choice'])==0
-#     out_dict['valid_past'] = (np.isnan(out_dict['choice'])==0) & (np.isnan(out_dict['prior_choice'])==0)
-    
-#     out_dict['session'] = [os.path.split(session_dir)[1]] * trialdata.shape[0]
-#     return pd.DataFrame(out_dict)
-    
-#-----------------------------------------
 #%%----Go through the list of useful sessions and get the data
 
 subject_data = dict()
@@ -352,47 +143,15 @@ separate_axes(ax)
 ax.set_xlabel('Stimulus rate (Hz)')
 ax.set_ylabel('Fraction right side choices')  
 
-#%%-----
-# # #TODO: Put this function into chiCa
-
-
-# #----Function for wilson score confidence interval----
-# def calculateWilsonScoreInterval(data):
-#     ''' lowerBound, upperBound = calculateWilsonScoreInerval(data);
-    
-#     % Calculate the Wilson score confidence interval for binomial
-#     % distributions. This confidence intervall as asymmetric, bounded by 0 and
-#     % 1 and "pulls" towards 0.5. Currently, this function only handles an alpha
-#     % level of 0.05.
-#     % Fromula was drawn from:
-#     % https://www.ucl.ac.uk/english-usage/staff/sean/resources/binomialpoisson.pdf
-#     %
-#     % INPUT: -data: A vector of 0s and 1s containing the observed outcomes.
-#     %               Nans can be tolerated.
-#     %
-#     % OUTPUTS: -lowerBound/upperBound: The lower and upper bound of the
-#     %                                  confidence interval.
-#     %
-#     % LO, 5/4/2021
-#     %
-#     %--------------------------------------------------------------------------'''
-#     import numpy as np
-#     p = np.nanmean(data) #take the average fo all the specified values
-#     n = np.sum(np.isnan(data)==0) #number of valid observations
-#     z = 1.95996 #the critical value for an alpha level of 0.05
-    
-#     lowerBound = (p + z**2/(2*n) - z*np.sqrt(p*(1-p)/n + z**2/(4*n**2)))/(1 + z**2/n);
-#     upperBound = (p + z**2/(2*n) + z*np.sqrt(p*(1-p)/n + z**2/(4*n**2)))/(1 + z**2/n);
-    
-#     return lowerBound, upperBound
-
 #%%--- Fit trial history dependent psychometric curves for each animal,
 # also show repsonse averages per stim strength with wilson score interval
 
 #######-----Fig 1d, pick LO074-------##################
 
-#Define a path to automatically save the plots - there will be one per animal
-save_to = 'C:/Users/Lukas Oesch/Documents/ChurchlandLab/Trial-history_manuscript/Figures/Fig1d_plots'
+#Optional: define a path to automatically save the plots - there will be one per animal
+#save_to = 'C:/Users/Lukas Oesch/Documents/ChurchlandLab/Trial-history_manuscript/Figures/Fig1d_plots'
+save_to = None
+
 cols = ['#606cbe', '#48a7b1', '#deb35e', '#de8468'] #Plotting color for different trial history contexts
 #--order is previous correct left, prev incorrect left, prev incorrect right, correct right
 
@@ -449,13 +208,16 @@ for subj in dict_keys:
     ax.set_xlabel('Stimulus rate (Hz)')
     ax.set_ylabel('Fraction right side choices')
     ax.set_title(subj)      
-          
-    fi.savefig(os.path.join(save_to, subj + '.svg'))
+    
+    if save_to is not None:    
+        fi.savefig(os.path.join(save_to, subj + '.svg'))
 
-#%% Plot the psychometric parameter estimates for the different trial history contexts
+#%%------Plot the psychometric parameter estimates for the different trial history contexts
 
-#----------This is for supplementary figure 1a, b, c and d
+###############-------Supplementary figure 1a, b, c and d--------##############
 psy_array = np.squeeze(psych_param).transpose(1,0,2) #Subjects x Trial history x parameter
+#Please note that psy_array[:,4,:] represents the psychometric parameters fitted for all trials
+#irrestpective of trial history.
 
 #Jitter the dots representing individual subjects 
 tmp = 0.5-np.random.rand(psy_array.shape[0])
@@ -463,8 +225,10 @@ jitter = np.sign(tmp) * tmp**2
 
 titles = ['Sensory_bias',
           'Sensitivity',
-          'Upper_lapse_rate',
-          'Lower_lapse_rate']
+          'Upper lapse rate',
+          'Lower lapse rate']
+
+x_tick_labels = ['Previous correct left', 'Previous incorrect left', 'Previous incorrect right', 'Previous correct right']
 
 for k in range(len(titles)):
     
@@ -477,12 +241,16 @@ for k in range(len(titles)):
         ax.errorbar(n+1.1, av, yerr=sem, color = cols[n], fmt='o', markerfacecolor = 'w', capsize=4)
         ax.set_title(titles[k])
         ax.set_xlim([0,5])
+        ax.set_xticks(np.arange(1,5))
+        ax.set_xticklabels(x_tick_labels, rotation=45, ha = 'right')
+        ax.set_ylabel('Parameter value')
         separate_axes(ax)
         
 #%%-------Arrange the data for lme_stats and save to .csv
 
 save_to = '/Users/loesch/Documents/Churchland_lab/Trial-history_manuscript/Figures/Supp_fig1_panels_202050601'
 file_names = ['perceptual_bias', 'sensitivity','upper_lapse_rate', 'lower_lapse_rate']
+
 #psy_array dimensions are: Subjects x Trial history (plus one more condition whivch is all together) x parameter
 for k in range(len(file_names)):
     param_estimate = np.reshape(psy_array[:,:4,k].T, (psy_array.shape[0]*4))
@@ -502,9 +270,10 @@ for k in range(len(file_names)):
 # datatype folder within the current subject's session folder. Please make sure
 # that an analysis folder exists beofre running this part
 
+fit_models = False #Set to True to fit and retain models, set to False if you want to load existing fits
+
 
 file_name = 'logreg_fig_one' #The name to the files for these models
-fit_models = False #Set to True to fit and retain models, set to False if you want to load existing fits
 
 model_params = {'penalty': 'l2', 'inverse_regularization_strength': 1, 'solver': 'liblinear', 'fit_intercept': False, 'normalize': False}
 # Note that we use the same regularization strength for all the models and do not optimize this parameter.
@@ -578,9 +347,11 @@ for subj in subject_data.keys():
 # Please note that due to early withdrawals the number of trials that have a consecutive history
 # of valid trials decreases the farther in the past trials are included.
 
-#------------Supplementary figure 1 
-file_names = ['main_effects_logreg_suppfig_one', 'main_effects_logreg_twoback_suppfig_one'] #The name to the files for these models
+#######--------Supplementary figure 1g--------------##########################
+
 fit_models = False #Once they are computed they may also be loaded from their stored files
+ 
+file_names = ['main_effects_logreg_suppfig_one', 'main_effects_logreg_twoback_suppfig_one'] #The name to the files for these models
 
 model_params = {'penalty': 'l2', 'inverse_regularization_strength': 1, 'solver': 'liblinear', 'fit_intercept': False, 'normalize': False}
 subsampling_rounds = 100
@@ -631,7 +402,7 @@ for n in range(len(file_names)):
                         choice_strategy_models = balanced_logistic_model_training(design_matrix, resp_matrix, k_folds, subsampling_rounds, secondary_labels, model_params)
                         if not os.path.isdir(os.path.join(base_dir,subj,ses,'analysis')):
                             os.mkdir(os.path.join(base_dir,subj,ses,'analysis'))
-                            choice_strategy_models.to_hdf(os.path.join(base_dir,subj,ses,'analysis',file_names[n] + '.hdf5'), '/Data', complevel=9) #Use compression
+                        choice_strategy_models.to_hdf(os.path.join(base_dir,subj,ses,'analysis',file_names[n] + '.hdf5'), '/Data', complevel=9) #Use compression
                     except:
                         failed = True
                         insufficient_sessions[n].append([subj,ses])
@@ -656,36 +427,44 @@ for n in range(len(file_names)):
                'session': tmp_ses}
         main_eff_logreg[n][subj] = tmp
     
-#--------Do some ploting
+#%%---Plot the different regressor weights for the two-back logistic regression
 
-#More for internal use plot the model performance
+#More for internal use: Compare the performance of the different models
 perf = []
 perf.append([np.mean(subjects_logreg[subj]['model_accuracy']) for subj in subjects_logreg.keys()])
 for k in main_eff_logreg:
     perf.append([np.mean(k[subj]['model_accuracy']) for subj in k.keys()])
 
+x_tick_labels = ['partitioned model', 'interaction model', 'two-back']
 perf = np.squeeze(perf).T
 ax = plt.figure().add_subplot(111)
 ax.plot(perf.T, linewidth=0.5, color = gray)
 ax.plot(np.mean(perf,axis=0), color='k', marker='o')
+ax.set_xticks([0,1,2])
+ax.set_xticklabels(x_tick_labels, rotation=45, ha='right')
+ax.set_ylabel('Model accuracy')
 ax.set_ylim([0.5,1])
+separate_axes(ax)
+
+######-----------Supplementary Figure 1g------------------####################
 
 #Plot the weights for two trials back
+w_names = ['intercept', 'stimulus', 'previous_choice', 'previous_category', 'previous_interaction','choice_two_back', 'category_two_back', 'interaction_two_back']
 main_eff_weights = np.squeeze([np.mean(main_eff_logreg[1][subj]['logreg_weights'],axis=0) for subj in main_eff_logreg[1].keys()])
 ax = plt.figure(figsize=[4.8,4.8]).add_subplot(111)
 ax.plot(main_eff_weights.T, linewidth=0.5, color = gray)
 av = np.mean(main_eff_weights,axis=0)
 sem = np.std(main_eff_weights,axis=0) / np.sqrt(main_eff_weights.shape[0])
-ax.errorbar(np.arange(main_eff_weights.shape[1]), av, yerr=sem,  fmt='o', capsize=4, color='k')
-#ax.plot(np.mean(main_eff_weights,axis=0), color='k', marker='o')
+ax.errorbar(np.arange(main_eff_weights.shape[1]), av, yerr=sem,  fmt='o', capsize=4, color='k', markerfacecolor='w')
 ax.plot([0,7],[0,0], linewidth=0.3,linestyle ='--', color = 'gray')
+ax.set_xticks(np.arange(8))
+ax.set_xticklabels(w_names, rotation=45, ha='right')
+ax.set_ylabel('Choice decoding weight')
 separate_axes(ax)
-
 
 #Make the data frame for stats
 export_loc = '/Users/loesch/Documents/Churchland_lab/Trial-history_manuscript/Figures/Supp_fig1_panels_202050601'
 tmp_dict = {'logreg_weights': [], 'abs_logreg_weights': [], 'regressor': [],'is_shuffle': [], 'subject':[]}
-w_names = ['intercept', 'stimulus', 'previous_choice', 'previous_category', 'previous_interaction','choice_two_back', 'category_two_back', 'interaction_two_back']
 
 for subj in main_eff_logreg[1].keys():
     dat = main_eff_logreg[1][subj]
@@ -699,28 +478,10 @@ logreg_df = pd.DataFrame(tmp_dict)
 logreg_df.to_csv(os.path.join(export_loc,'main_effects_logreg_weights_for_lme.csv'))
 
 
-# #Plot the weight magnitudes for two trials back for model and shuffle
-# main_eff_weight_mag = np.squeeze([np.mean(np.abs(k[subj]['logreg_weights']),axis=0) for subj in k.keys()])
-# main_eff_shu_weight_mag = np.squeeze([np.mean(np.abs(k[subj]['shuffled_weights']),axis=0) for subj in k.keys()])
-# tmp = [main_eff_shu_weight_mag, main_eff_weight_mag]
-# cols = [gray, '#2986cc']
-# ax = plt.figure().add_subplot(111)
-# for k in range(len(tmp)):
-#     av = np.mean(tmp[k],axis=0)
-#     sem = np.std(tmp[k],axis=0) / np.sqrt(tmp[k].shape[0])
-#     ax.fill_between(np.arange(tmp[k].shape[1]), av - sem, av + sem, color=cols[k], linewidth=None, alpha = 0.4)
-#     ax.plot(av, color= cols[k], marker='o')
-    
-# ax.plot(main_eff_weights.T, linewidth=0.5, color = gray)
-# ax.plot(np.mean(main_eff_weights,axis=0), color='k', marker='o')
-# ax.plot([0,7],[0,0], linewidth=0.3,linestyle ='--', color = 'gray')
-
-
-
 #%%-----Plot trial history weights for the chosen subject LO073-----##
 
 ###############----Figure 1e ---------#########################
-save_to = '/Users/loesch/Documents/Churchland_lab/Trial-history_manuscript/Figures/Fig1_panels_20250601'
+#save_to = '/Users/loesch/Documents/Churchland_lab/Trial-history_manuscript/Figures/Fig1_panels_20250601'
 w_names = ['Bias', 'Stimuls strength', 'Previous correct left', 'Previous incorrect left', 'Previous incorrect right', 'Previous correct right']
 
 fi = plt.figure(figsize= [4.8,4.8])
@@ -731,13 +492,12 @@ sem = np.std(subjects_logreg['LO074']['logreg_weights'],axis=0) / np.sqrt(subjec
 ax.errorbar(w_names, av, yerr=sem, color = 'k', fmt='o', capsize=4, markerfacecolor='w')
 ax.plot([0,5],[0,0],color='k', linewidth=0.5, linestyle='--')
 separate_axes(ax)
-ax.set_ylabel('Choice decoding Weight')
-ax.set_xticklabels(w_names, rotation = 45)
-fi.savefig(os.path.join(save_to, subj + 'all_sessinon_logreg_Fig1e.svg'))
+ax.set_ylabel('Choice decoding weight')
+ax.set_xticklabels(w_names, rotation = 45, ha = 'right')
+#fi.savefig(os.path.join(save_to, subj + 'all_sessinon_logreg_Fig1e.svg'))
 
 #%%----Restructure data to pandas data frame with absolute weight
 
-#abs_weight ~ regressor + is_shuffle + weight_category * is_shuffle (1|subject) #Maybe include sex at some point
 export_loc = '/Users/loesch/Documents/Churchland_lab/Trial-history_manuscript/Figures/Fig1_panels_20250601'
 tmp_dict = {'logreg_weights': [], 'abs_logreg_weights': [], 'regressor': [],'is_shuffle': [], 'subject':[]}
 
@@ -753,40 +513,19 @@ logreg_df = pd.DataFrame(tmp_dict)
 logreg_df.to_csv(os.path.join(export_loc,'logreg_weights_for_lme.csv'))
 
 #%%----Plot boxplots of average logreg weights for each animal.
-# abs_weights = logreg_df['logreg_weights'][logreg_df['is_shuffle']=='not']
-# abs_weights = np.array(abs_weights).reshape(int(abs_weights.shape[0]/6),6)
-# ax = plt.figure().add_subplot(111)
-# fancy_boxplot(ax,abs_weights, None)
-# plt.plot([1,2,3,4,5,6], abs_weights.T)
 
-# signed_weights = logreg_df['raw_weight'][logreg_df['is_shuffle']=='not']
-# signed_weights = np.array(signed_weights).reshape(int(signed_weights.shape[0]/6),6)
-# ax = plt.figure().add_subplot(111)
-# fancy_boxplot(ax,signed_weights,None)
-
-# #Average for every mouse
-# fi = plt.figure(figsize= [6.8,4.8])
-# ax = fi.add_subplot(111)
+######--------Figure 1f---------###############
 
 w_names = ['Bias', 'Stimuls strength', 'Previous correct left', 'Previous incorrect left', 'Previous incorrect right', 'Previous correct right']
-num_subj = len(subjects_logreg.keys())
-shift = 0.5 / num_subj
 average = []
 average_shuffled = []
 subjects = list(subjects_logreg.keys())
-for k in range(len(subjects)):
+for k in range(len(subjects)): #Get the average over sessions for each subject
     dat = subjects_logreg[subjects[k]]
-    av = np.mean(dat['logreg_weights'],axis=0)
-    sem = np.std(dat['logreg_weights'],axis=0) / np.sqrt(dat['logreg_weights'].shape[0])
-    vect = np.arange(6) + (shift*k - 0.25)
-    ax.errorbar(vect, av, yerr=sem, fmt='o', capsize=4)
-    #ax.errorbar([1,2,3,4,5,6], av, yerr=sem, color = gray, fmt='o', capsize=4)
-    #ax.scatter(w_names, av, c=gray, s=40, edgecolor='w')
-    average.append(av)
+    average.append(np.mean(dat['logreg_weights'],axis=0))
     average_shuffled.append(np.mean(dat['shuffled_weights'],axis=0))
 average = np.squeeze(average)
 average_shuffled = np.squeeze(average_shuffled) 
-
 
 fi = plt.figure(figsize=[5.5,4.8])
 ax = fi.add_subplot(111)
@@ -798,10 +537,13 @@ jitter = (0.5 - np.random.rand(average.shape[0]))/(1/widths)
 for k in range(average.shape[0]):
     ax.scatter(np.arange(1,7) + jitter[k], average[k,:], c=gray,s=14)
 ax.set_ylim([-1, 2.5])
+ax.set_ylabel('Choice decoding weight')
 separate_axes(ax)
 
+#%%Plot the variance of the parameter estimates
 
-#Plot the variance of the parameter estimates
+######----------Supplementary figure 1e-------------####################
+
 variance = []
 variance_shuffled = []
 subjects = list(subjects_logreg.keys())
@@ -823,6 +565,7 @@ ax.set_xticklabels(w_names,rotation = 45, ha="right")
 for k in range(variance.shape[0]):
     ax.scatter(np.arange(1,7) + jitter[k], variance[k,:], c=gray,s=14)
 ax.set_ylim([0, 0.5])
+ax.set_ylabel('Choice decoding weight variance')
 separate_axes(ax)
 
 #Make another csv for the mixed-effects model
@@ -834,25 +577,10 @@ d_dict['subject'] = list(subject_data.keys()) * (variance.shape[1] * 2)
 df = pd.DataFrame(d_dict)
 df.to_csv('/Users/loesch/Documents/Churchland_lab/Trial-history_manuscript/Figures/Supp_fig1_panels_202050601/logreg_weigth_variance.csv')
 
-
-# fi = plt.figure()
-# ax = fi.add_subplot(111)
-# fancy_boxplot(ax, average, None, labels = None, x_label = None, y_label = None, widths = 0.25, positions=np.arange(average.shape[1])+0.8)
-# fancy_boxplot(ax, average_shuffled, ['w']*average_shuffled.shape[1], labels = w_names, x_label = None, y_label = '\u03B2 weight magnitude', widths = 0.25, positions=np.arange(average.shape[1])+1.2)
-# ax.set_xlim([0.5,average.shape[1]+0.5])
-# ax.axhline(0, linestyle='--', color='k')
-# separate_axes(ax)
-# ax.set_xticklabels(w_names,rotation = 45, ha="right")
-
-
-# jitter = (0.5 - np.random.rand(average.shape[0]))/2
-# for k in range(average.shape[0]):
-#     ax.scatter(np.arange(1,7) + jitter[k], average[k,:],c=gray,s=20)
-
 #%%----Embed the model weights using umap and color code by subject
 
+#############------Supplementary figure 1f-------------########################
 
-#----- Supplementary figure 1
 import umap
 import matplotlib.cm as cm
 weights = [subjects_logreg[x]['logreg_weights'] for x in subjects_logreg.keys()]
@@ -868,15 +596,13 @@ for k in range(len(weights)):
     current_start = stop
     subj_idx = subj_idx + list(np.zeros([ind[-1].shape[0]],dtype=int)+k)
 ax = plt.figure(figsize=[4.8,4.8]).add_subplot(111)
-# for k in ind:
-#     plt.scatter(embedding[k,0], embedding[k,1], cmap=cm.Spectral)
 ax.scatter(embedding[:,0], embedding[:,1], s=14, c = subj_idx, cmap=cm.Spectral)
 separate_axes(ax)
 
 #%%----Plot session performance against history strength---#####
 
-#-----Figure 1H
-save_to = 'C:/Users/Lukas Oesch/Documents/ChurchlandLab/Trial-history_manuscript/Figures'
+#######################-----Figure 1h-------##################################
+#save_to = 'C:/Users/Lukas Oesch/Documents/ChurchlandLab/Trial-history_manuscript/Figures'
 
 hex_cols = ['#ffffd6',
  '#ecf8af',
@@ -891,8 +617,7 @@ hex_cols = ['#ffffd6',
  '#070d55']
 col_map = matplotlib.colors.LinearSegmentedColormap.from_list("", hex_cols)
 
-
-#Extract aniaml performance, the strength of the trial history coefficients and te stim coefficients
+#Extract aniaml performance, the strength of the trial history coefficients and the stim coefficients
 session_performance = []
 history_strength = []
 stim_coef = []
@@ -911,7 +636,8 @@ for subj in subject_data.keys():
     tmp_difficult = []
     for ses in sessions:
         tmp_perf.append(np.mean(dat['outcome'][dat['valid_past'] & (dat['session']==ses)]))
-        tmp_difficult.append(np.sum([(x >= 8) and (x <= 16) for x in subject_metrics[np.where(np.array(subjects)==subj)[0][0]]['stim_strengths'][subject_metrics[np.where(np.array(subjects)==subj)[0][0]]['session']==ses].tolist()[0]]) > 0)
+        subj_idx = [x for x in range(len(subject_metrics)) if subject_metrics[x]['subject_id'][0]==subj][0] #Arrgh, redefined what the subjects are in the middle of this script, very confusing...
+        tmp_difficult.append(np.sum([(x >= 8) and (x <= 16) for x in subject_metrics[subj_idx]['stim_strengths'][subject_metrics[subj_idx]['session']==ses].tolist()[0]]) > 0)
     session_performance.append(np.squeeze(tmp_perf))
     includes_difficult.append(tmp_difficult)
 
@@ -925,35 +651,13 @@ d_dict['stim_coef'] = np.hstack(stim_coef)
 df = pd.DataFrame(d_dict)
 df.to_csv('/Users/loesch/Documents/Churchland_lab/Trial-history_manuscript/Figures/Fig1_panels_20250601/hist_delta_vs_performance.csv')
 
-# fi = plt.figure(figsize=[5.8,4.8])
-# ax = fi.add_subplot(111)
-# sc = ax.scatter(np.hstack(history_strength), np.hstack(session_performance), c=np.hstack(stim_coef), alpha=1, linewidth=0)
-# #sc = ax.scatter(np.hstack(history_strength), np.hstack(session_performance), c=np.hstack(stim_coef), cmap = col_map, alpha=1, linewidth=0)
-# cob = fi.colorbar(sc)
-# ax.set_ylim([0.48, 1])
-# ax.set_xlim([0, 2.653423907830812])
-# separate_axes(ax)
-# ax.set_xlabel('History strength')
-# ax.set_ylabel('Performance')
-# cob.set_label('Stimulus weight')
-
-# corr, p_val = pearsonr(np.hstack(history_strength), np.hstack(session_performance))
-
-# fi.savefig(os.path.join(save_to,'Fig1h_str_perf_corr.svg'))
-
-# bin_id = np.digitize(np.hstack(history_strength), np.arange(0,np.max(np.hstack(history_strength)),0.1))
-# maxima = np.squeeze([np.max(np.hstack(session_performance)[bin_id==x]) for x in np.unique(bin_id)])
-# plt.figure()
-# plt.plot(maxima)
-# corr, p_val = pearsonr(np.arange(np.unique(bin_id).shape[0]), maxima)
-
 #Reconstruct line from LME results run in R
 lims = [np.min(df['hist_stim_coef_delta']), np.max(df['hist_stim_coef_delta'])]
 lims = np.round(lims, decimals=1)
 x_vect = np.arange(lims[0],lims[1],0.01)
 regression_line = 0.744872 + (-0.055290 * x_vect)
 
-
+#-----Grey scatter version
 # gray = '#858585'
 # line_col = '#710909'
 # #Try plotting the difference between the stimulus weight and the trial history strength
@@ -965,10 +669,10 @@ regression_line = 0.744872 + (-0.055290 * x_vect)
 # separate_axes(ax)
 # corr, p_val = pearsonr(np.hstack(history_strength) - np.hstack(stim_coef), np.hstack(session_performance))
 
-#---Color-coded version of the plot above
+###########-----------Figure 1g-----------######################
+
 gray = '#858585'
 line_col = 'k'
-#Try plotting the difference between the stimulus weight and the trial history strength
 subj_code = np.zeros([df.shape[0]]) * np.nan
 for k in range(np.unique(df['subject']).shape[0]):
     subj_code[df['subject'] == np.unique(df['subject'])[k]] = k
@@ -983,9 +687,7 @@ ax.set_ylim([0.5,1])
 separate_axes(ax)
 corr, p_val = pearsonr(np.hstack(history_strength) - np.hstack(stim_coef), np.hstack(session_performance))
 
-
-
-
+######---------Reviewer Figure 3a, b, and c-----------################
 
 #Reviewer comment: exclude high hist strength mouse
 anim_idx = np.argmax([np.mean(x) for x in history_strength]) #The mouse is LY008 the last in the list
@@ -998,7 +700,7 @@ lims = np.round(lims, decimals=1)
 x_vect = np.arange(lims[0],lims[1],0.01)
 regression_line = 0.734097 + (-0.065992 * x_vect)
 
-#Try plotting the difference between the stimulus weight and the trial history strength
+#Plot the difference between the stimulus weight and the trial history strength
 fi = plt.figure(figsize=[4.8,4.8])
 ax = fi.add_subplot(111)
 sc = ax.scatter(np.hstack(history_strength)[no_LY008] - np.hstack(stim_coef)[no_LY008], np.hstack(session_performance)[no_LY008], c=subj_colors[no_LY008], edgecolor='w', linewidth=0.5)
@@ -1031,6 +733,13 @@ x_min, x_max = np.min([x.get_xlim()[0] for x in axes]), np.max([x.get_xlim()[1] 
 
 #%%----Get the general stats for these behavioral sessions for supplementary table 1
 
+#######------------Supplementary Table 1-----------######################
+
+#This is dirty: Redefine the subject list with the original animals, so you can use include_session
+#and extract all the metrics from subject_metrics....
+subjects = ['LO028', 'LO032', 'LO037', 'LO038', 'LO051', 'LO061', 'LO067',
+            'LO068', 'LO069', 'LO071', 'LO073', 'LO074', 'LO090', 'LO091', 'LY007', 'LY008']
+
 supp_table_one = {'subject': [],
           'stimulus_modality': [],
           'session_number': [],
@@ -1046,12 +755,12 @@ full_stim_set = [4, 6 ,8, 10, 14, 16, 18, 20] # These stims have to be present f
 
 for n in range(len(include_sessions)): #Loop through all the subjects
     if include_sessions[n] is not None:
-        #tmp_modality = [] #Soooo ugly!
         tmp_ses_full_stim = []
         tmp_perf = []
         tmp_val = []
         tmp_early = []
         tmp_no_choice = []
+        tmp_hist_str = []
        
         for session in include_sessions[n]:
             
