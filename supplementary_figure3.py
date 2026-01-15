@@ -10,37 +10,30 @@ from chiCa import *
 import chiCa
 import matplotlib.pyplot as plt
 import pandas as pd
-from scipy.stats import ttest_rel, wilcoxon, pearsonr
 from labdatatools import *
 import os
-import matplotlib.pyplot as plt
-import matplotlib
 from glob import glob
-from scipy.ndimage import gaussian_filter1d
-from scipy.stats import pearsonr, zscore
-import multiprocessing as mp
-from time import time
-import sys
-sys.path.append('C:/Users/Lukas Oesch/Documents/ChurchlandLab/fit_psychometric/fit_psychometric')
-sys.path.append('/Users/loesch/Documents/Churchland_lab/chiCa')
-from analysis import *
+# from scipy.ndimage import gaussian_filter1d
+# from scipy.stats import pearsonr, zscore
+
 from scipy.ndimage import zoom
 
 
 #%%---Load the data from the example session and compute cvR and dR
 
+subject_data = dict()
+base_dir = get_labdata_preferences()['paths'][0] #Retrieve the base directory
+## Alternatively set the base directory manualy:
+#base_dir = 'my base directory'
 
-#session_dir = '/Users/loesch/data/LO068/20230831_132717'
-session_dir = '/Users/loesch/data/LO069/20240102_125134'
+session_dir = os.path.join(base_dir, 'LO069', '20240102_125134') #Construct the session_dir
 encoding_model_name = 'RidgeCV_encoding_models_ITI_partitioned_Fig3.npy'
-
 enc = np.load(os.path.join(session_dir, 'analysis', encoding_model_name),allow_pickle = True).tolist()
 
 dR = []
 cvR = []
 betas_single = []
-
-model_num = int((len(enc['r_squared']) - 2) / 2)
+model_num = int((len(enc['r_squared']) - 2) / 2) #The first two mdodels are the full and the time regressor only models
 for k in range(2, model_num + 2):  
     cvR.append(enc['r_squared'][k] - enc['r_squared'][1])
     dR.append(enc['r_squared'][0] - enc['r_squared'][k + model_num])
@@ -48,24 +41,20 @@ for k in range(2, model_num + 2):
 full_R = enc['r_squared']
 full_betas = enc['betas'][0]
 
+# Generate the alignment timestamps and the list of frame indices for each trial phase
+frame_rate = int(np.load(glob(os.path.join(session_dir, 'analysis', '*miniscope_data.npy'))[0],allow_pickle = True).tolist()['frame_rate'])
 
-#Get all the alignment timings etc.
-#Set the times up
 aligned_to = ['outcome_presentation', 'outcome_end', 'PlayStimulus', 'DemonWaitForResponse']
 time_frame = [ np.array([round(0*frame_rate), round(1*frame_rate)+1], dtype=int),
               np.array([round(-1*frame_rate), round(0.3*frame_rate)+1], dtype=int),
               np.array([round(-0.5*frame_rate), round(1*frame_rate)+1], dtype=int),
               np.array([round(-0.2*frame_rate), round(0.3*frame_rate)+1], dtype=int)]
-
-
-#Get list of indices
 insertion_index = np.zeros(len(time_frame)+1)
 insertion_index[1] = time_frame[0][1] - time_frame[0][0]
 idx_list = [np.arange(insertion_index[1],dtype=int)]
 for k in range(1,len(time_frame)):
     insertion_index[k+1] = int(insertion_index[k] + time_frame[k][1] - time_frame[k][0])
     idx_list.append(np.arange(insertion_index[k],insertion_index[k+1], dtype=int))
-
 
 #%%---- generate a bettery of plots with the encdoing model weights comapring the full model to the single var models
 
