@@ -9,11 +9,11 @@ Created on Sun Mar 30 09:58:35 2025
 from chiCa import *
 import chiCa
 import matplotlib.pyplot as plt
+plt.rcParams["font.family"] = "Arial"
 from labdatatools import *
 import os
 from glob import glob
 from scipy.ndimage import zoom
-
 
 #%%---Load the data from the example session in panes a-d and compute cvR and dR
 

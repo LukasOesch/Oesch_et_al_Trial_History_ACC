@@ -8,20 +8,20 @@ Created on Sun Mar 23 15:14:58 2025
 
 from chiCa import *
 import chiCa
-import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-from scipy.stats import ttest_rel, wilcoxon, pearsonr
+#from scipy.stats import pearsonr
 from labdatatools import *
 import os
 import matplotlib.pyplot as plt
-import matplotlib
-from glob import glob
-from scipy.ndimage import gaussian_filter1d
-from scipy.stats import pearsonr, zscore
-import multiprocessing as mp
-from time import time
-import sys
+plt.rcParams["font.family"] = "Arial"
+#import matplotlib
+#from glob import glob
+#from scipy.ndimage import gaussian_filter1d
+#from scipy.stats import pearsonr, zscore
+#import multiprocessing as mp
+#from time import time
+#import sys
 from sklearn.decomposition import PCA
 from scipy.spatial import procrustes
 from scipy.ndimage import zoom
@@ -266,7 +266,7 @@ for k in range(len(pos)):
 ax.set_xlim([0.5, 2.5])
 ax.set_ylim([0, 1])
 ax.set_xticks([1,2])
-ax.set_xticklabels=(['within', 'across'])
+ax.set_xticklabels(['Within subject', 'Across subjects'])
 separate_axes(ax)
 
 #Prepare csv for lme
@@ -408,5 +408,5 @@ for k in [target_session, compare]:
         plt.colorbar()
         plt.xticks([])
         plt.yticks([])
-        plt.title(f'Session {k}, dimension {n}')
+        plt.title(f'Session {k}, dimension {n + 1}')
   

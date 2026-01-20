@@ -7,21 +7,19 @@ Created on Mon Jan 27 13:29:13 2025
 
 from chiCa import *
 import chiCa
-import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
-from scipy.stats import ttest_rel, wilcoxon, pearsonr
 from labdatatools import *
 import os
 import matplotlib.pyplot as plt
+plt.rcParams["font.family"] = "Arial"
 import matplotlib
 from glob import glob
 from scipy.ndimage import gaussian_filter1d
-from scipy.stats import pearsonr, zscore
+from scipy.stats import zscore
 import multiprocessing as mp
 from time import time
 import sys
-# sys.path.append('C:/Users/Lukas Oesch/Documents/ChurchlandLab/fit_psychometric/fit_psychometric')
-# from analysis import *
 sys.path.append('/Users/loesch/Documents/Churchland_lab/chiCa') #Add the path to chiCa,
 #so that the decoding functions will be visible to all the processes when running multiprocess
 from sklearn.metrics import confusion_matrix
@@ -180,7 +178,7 @@ sig_spacing = [0,-6, -13,-23, -29,-35,-40] #Set the spacing between their traces
 ax = plt.figure(figsize=[6,4.8]).add_subplot()
 #Start plotting the traces of the example neurons
 for k in range(len(neuron_id)):
-    ax.plot(zscore(miniscope_data['F'][neuron_id[k],:].T) + sig_spacing[k],color='k')
+    ax.plot(zscore(miniscope_data['F'][neuron_id[k],:].T) + sig_spacing[k],color='k', linewidth=1)
 ylims = ax.get_ylim()
 
 #Draw colored boxes representing the just made choice and received outcome.
@@ -353,6 +351,8 @@ for k in range(len(idx_list)):
     ax_list[-1].scatter(prev_cho, prev_out, s=20, c=gray, edgecolor='w', linewidth=0.5)
     ax_list[-1].axvline(0, color='k', linestyle='--', linewidth=0.5)
     ax_list[-1].axhline(0, color='k', linestyle='--', linewidth=0.5)
+    ax_list[-1].set_xlabel('Previous right - left activity (SD)')
+    ax_list[-1].set_ylabel('Previous correct - incorrect activity (SD)')
     ax_list[-1].set_title(titles[k])
     
     #Symmetric axes
@@ -477,6 +477,7 @@ for k in range(1,len(time_frame)):
     idx_list.append(np.arange(insertion_index[k],insertion_index[k+1], dtype=int))
 
 #Retrieve model data
+use_name = 'Fig2_decoding_previous_choice_outcome_combination_spr.npy' # Re-define here from section above in case the user doesn't need to fit the models
 classes = 4
 model_accuracy = []
 shuffle_accuracy = []
@@ -680,8 +681,8 @@ im = ax.imshow(cross_pred_acc.T, vmin=0, vmax=1, cmap = col_map)
 for k in line_idx:
     ax.axvline(k, color = 'k', linewidth=0.5, linestyle='--')
     ax.axhline(k, color = 'k', linewidth=0.5, linestyle='--')
-ax.set_xticks([30.5, 60.5, 90.5, 120.5]) # Match the ticks with trial phase transitions
-ax.set_yticks([30.5, 60.5, 90.5, 120.5])
+# ax.set_xticks([30.5, 60.5, 90.5, 120.5]) # Match the ticks with trial phase transitions
+# ax.set_yticks([30.5, 60.5, 90.5, 120.5])
 ax.set_ylabel('Training time points')
 ax.set_xlabel('Testing time points')
 cbar = fi.colorbar(im)

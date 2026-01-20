@@ -7,13 +7,12 @@ Created on Wed Jan 29 23:05:13 2025
 
 from chiCa import * #Mke sure to be inside the chiCa folder
 import chiCa
-import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 from labdatatools import *
 import os
 import matplotlib.pyplot as plt
-import matplotlib
+plt.rcParams["font.family"] = "Arial"
 from glob import glob
 
 #%%-------First, define the sessions to fit.
@@ -196,6 +195,7 @@ for k in range(len(mean_cvR)):
     ax.scatter(np.arange(1, model_num + 1) + jitter[k], np.squeeze(mean_cvR)[k,:],c=gray,s=10)
 separate_axes(ax)
 ax.spines['bottom'].set_bounds([0.5, len(cvR_single)+0.5])
+ax.set_xticklabels(labels, rotation=45, ha ='right')
 
 ax = plt.figure(figsize=[10, 4.8]).add_subplot()
 widths = 0.7
@@ -206,6 +206,7 @@ for k in range(len(mean_dR)):
     ax.scatter(np.arange(1, model_num + 1) + jitter[k], np.squeeze(mean_dR)[k,:],c=gray,s=10)
 separate_axes(ax)
 ax.spines['bottom'].set_bounds([0.5, len(cvR_single)+0.5])
+ax.set_xticklabels(labels, rotation=45, ha ='right')
 
 ##############################################################################
 ######-----Optional: Sort neurons by overall explained variance and plot cvR2
@@ -282,7 +283,7 @@ for dat in [time_cvR, time_dR]:
     separate_axes(ax)
     
 #%%-----Figure 3D, E and F: Scatter plots of unique trial history variance
-#-------agains other variables
+#-------against other variables
 
 #Find number of cells per session
 cell_num = []

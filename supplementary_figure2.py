@@ -13,7 +13,7 @@ import pandas as pd
 from labdatatools import *
 import os
 import matplotlib.pyplot as plt
-#import matplotlib
+plt.rcParams["font.family"] = "Arial"
 from glob import glob
 from scipy.ndimage import gaussian_filter1d
 import multiprocessing as mp
@@ -243,6 +243,7 @@ ax = fi.add_subplot(111)
 cols = ['#9f6023','#345f69']
 labels = ['Previous choice', 'Previous outcome']
 plot_timecourse(ax, [np.squeeze(dec_acc_subj[:,:,0]), np.squeeze(dec_acc_subj[:,:,1])], frame_rate ,idx_list, colors = cols, line_labels=labels)
+ax.set_ylim([0.4, 1])
 separate_axes(ax)
 ax.set_ylabel('Decoding accuracy')
 ax.set_xlabel('Time (s)')
@@ -402,7 +403,7 @@ phase_label = ['Stimulus']
 # Make sure to keep them in the right order because the phase will be represented
 # as an integer in the loop!
 
-for phase in range(2): #Look at this during the stim and the action period after the ITI
+for phase in range(len(phase_label)): #Look at this during the stim- and optionally also the action period after the ITI
     decoding_accuracy_ITI_duration = []
     shuffle_accuracy_ITI_duration = []
     tmp_data = np.nanmean(dec_hist_ITI[:,idx_list[phase+2],:,:],axis=1)
@@ -658,7 +659,7 @@ for k in range(len(bars)):
     bars[k].set_edgecolor('k')
 
 for k in range(dec_acc_subj.shape[1]):
-    ax.scatter([0,1] + jitter[k], [np.mean(dec_acc_subj,axis=0)[k], np.mean(shu_acc_subj,axis=0)[k]], c=gray,s=14)
+    ax.scatter([0,1] + jitter[k], [np.mean(dec_acc_subj,axis=0)[k], np.mean(shu_acc_subj,axis=0)[k]], c=grey ,s=14)
 ax.set_ylim([0,1])
 separate_axes(ax)
 ax.set_ylabel('Decoding accuracy')
@@ -672,8 +673,7 @@ for k in subj_code:
 
 fi = plt.figure(figsize= [8,4.8])
 ax = fi.add_subplot(111)
-#cols = ['#2f65d0', '#2fd0aa', '#d09a2f', '#d04a2f', gray]
-cols = ['#606cbe', '#48a7b1', '#deb35e', '#de8468',gray]
+cols = ['#606cbe', '#48a7b1', '#deb35e', '#de8468',grey]
 spacer = 6
 labels = ['Previous correct left', 'Previous incorrect left', 'Previous incorrect right', 'Previous correct right', 'Shuffle']
 plot_timecourse(ax, [k.T for k in label_wise_acc_subj.transpose(2,1,0)] + [shu_acc_subj] , frame_rate ,idx_list, colors = cols, line_labels=labels, spacer=spacer )
