@@ -398,6 +398,7 @@ for session_dir in sessions:
         tr, te = k_fold_generator.__next__()
         training.append(tr)
         testing.append(te)
+        
     #%%------Based on the specification at the top of the script, determine
     # which regressors will have to be shuffled-----------
     
@@ -473,8 +474,12 @@ for session_dir in sessions:
     alpha_per_target = True #Allow every neuron to get its own best penalty
    
     for s_round in range(len(shuffle_regressor)):    
-     
-        alphas, betas, r_squared, corr, y_test, y_hat = chiCa.fit_ridge_cv_shuffles(X, Y, alpha_range, alpha_per_target, fit_intercept, shuffle_regressor[s_round], standardize_reg, training, testing)    
+        success = 0
+        while success == 0: #Some shuffles lead to non-converging svd for the OLS solutions that will throw errors occasionally
+            try:
+                alphas, betas, r_squared, corr, y_test, y_hat = chiCa.fit_ridge_cv_shuffles(X, Y, alpha_range, alpha_per_target, fit_intercept, shuffle_regressor[s_round], standardize_reg, training, testing)    
+            except:
+                pass
         time_r, time_corr = chiCa.r_squared_timecourse(y_test, y_hat, testing, block.shape[0])
         all_alphas.append(alphas)
         all_betas.append(betas)

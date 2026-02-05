@@ -10,6 +10,7 @@ Created on Fri Jan 17 12:32:43 2025
 """
 
 from chiCa import * #Run inside chiCa path to directly import it. Otherwise use sys to add the path, see below.
+import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 plt.rcParams["font.family"] = "Arial" #Use arial font for plotting labels
@@ -17,8 +18,6 @@ import pandas as pd
 from scipy.stats import pearsonr
 from labdatatools import * #Make sure to have labdata-tools installed and the data directory set to where the data are stored
 import os
-from glob import glob
-from scipy.ndimage import gaussian_filter1d
 
 # Add the path to the location containing the code for psychometric fits - please adapt to your specific path
 import sys
@@ -27,7 +26,10 @@ from analysis import *
 
 #%%--Get the session metrics for a set (or all) the animals
 
-#Here, hte function will query the google drive with all the stored data using 
+subjects = ['LO028', 'LO032', 'LO037', 'LO038', 'LO051', 'LO061', 'LO067',
+            'LO068', 'LO069', 'LO071', 'LO073', 'LO074', 'LO090', 'LO091', 'LY007', 'LY008']
+
+#Here, the function will query the google drive with all the stored data using 
 #labdata-tools, download and convert the originally acquired .mat files for the 
 #behavior and extract a set of performance and task parameters that will be used
 #in the following to decide whether to include animals or not.
@@ -39,9 +41,6 @@ from analysis import *
 #used to skip this step, see below
 
 #-------This might take a little moment!--------
-subjects = ['LO028', 'LO032', 'LO037', 'LO038', 'LO051', 'LO061', 'LO067',
-            'LO068', 'LO069', 'LO071', 'LO073', 'LO074', 'LO090', 'LO091', 'LY007', 'LY008']
-
 subject_metrics = []
 for subj in subjects:
     print(f'Runing diagnostics on {subj}...')
@@ -51,7 +50,7 @@ for subj in subjects:
 
 
 #----Alternative: Load existing file with animal sessions--------
-#A file with the subject metrics is provided within this repo (subject_metrics) to allow users to
+#A file with the subject metrics is provided within this repo (subject_metrics.npy) to allow users to
 #skip over the diagnosis process and avoid using labdata-tools as long as the data
 #are stored in the subject -> session -> datatype structure.
 
@@ -119,7 +118,7 @@ for subj_idx in range(len(subjects)):
 psy_models = []
 nx = np.linspace(4, 20, 100) #Specify the range of values for the curve reconstruction, 4 - 20 hz with 100 steps
 curve = []
-gray = '#858585'
+grey = '#858585'
 dict_keys = subject_data.keys()
 for subj in dict_keys:
     dat = subject_data[subj]
@@ -133,7 +132,7 @@ for subj in dict_keys:
 all_curves = np.vstack(curve).T
 fi = plt.figure(figsize= [3.8,4.8])
 ax = fi.add_subplot(1,1,1)
-ax.plot(nx, all_curves, color=gray, linewidth = 0.5)
+ax.plot(nx, all_curves, color=grey, linewidth = 0.5)
 ax.plot(nx, np.mean(all_curves,axis=1), color = 'k', linewidth=1.5)
 ax.plot([4,20],[0.5,0.5], linewidth=0.5, color = 'k', linestyle='--') #horizontal line
 ax.plot([12,12],[0,1], linewidth=0.5, color = 'k', linestyle='--') #horizontal line
@@ -438,7 +437,7 @@ for k in main_eff_logreg:
 x_tick_labels = ['partitioned model', 'interaction model', 'two-back']
 perf = np.squeeze(perf).T
 ax = plt.figure().add_subplot(111)
-ax.plot(perf.T, linewidth=0.5, color = gray)
+ax.plot(perf.T, linewidth=0.5, color = grey)
 ax.plot(np.mean(perf,axis=0), color='k', marker='o')
 ax.set_xticks([0,1,2])
 ax.set_xticklabels(x_tick_labels, rotation=45, ha='right')
@@ -452,11 +451,11 @@ separate_axes(ax)
 w_names = ['intercept', 'stimulus', 'previous_choice', 'previous_category', 'previous_interaction','choice_two_back', 'category_two_back', 'interaction_two_back']
 main_eff_weights = np.squeeze([np.mean(main_eff_logreg[1][subj]['logreg_weights'],axis=0) for subj in main_eff_logreg[1].keys()])
 ax = plt.figure(figsize=[4.8,4.8]).add_subplot(111)
-ax.plot(main_eff_weights.T, linewidth=0.5, color = gray)
+ax.plot(main_eff_weights.T, linewidth=0.5, color = grey)
 av = np.mean(main_eff_weights,axis=0)
 sem = np.std(main_eff_weights,axis=0) / np.sqrt(main_eff_weights.shape[0])
 ax.errorbar(np.arange(main_eff_weights.shape[1]), av, yerr=sem,  fmt='o', capsize=4, color='k', markerfacecolor='w')
-ax.plot([0,7],[0,0], linewidth=0.3,linestyle ='--', color = 'gray')
+ax.plot([0,7],[0,0], linewidth=0.3,linestyle ='--', color = 'grey')
 ax.set_xticks(np.arange(8))
 ax.set_xticklabels(w_names, rotation=45, ha='right')
 ax.set_ylabel('Choice decoding weight')
@@ -486,7 +485,7 @@ w_names = ['Bias', 'Stimuls strength', 'Previous correct left', 'Previous incorr
 
 fi = plt.figure(figsize= [4.8,4.8])
 ax = fi.add_subplot(1,1,1)
-ax.plot(w_names, subjects_logreg['LO074']['logreg_weights'].T,color=gray, linewidth=0.5)
+ax.plot(w_names, subjects_logreg['LO074']['logreg_weights'].T,color=grey, linewidth=0.5)
 av = np.mean(subjects_logreg['LO074']['logreg_weights'],axis=0)
 sem = np.std(subjects_logreg['LO074']['logreg_weights'],axis=0) / np.sqrt(subjects_logreg['LO074']['logreg_weights'].shape[0])
 ax.errorbar(w_names, av, yerr=sem, color = 'k', fmt='o', capsize=4, markerfacecolor='w')
@@ -531,11 +530,11 @@ fi = plt.figure(figsize=[5.5,4.8])
 ax = fi.add_subplot(111)
 widths = 0.6
 fancy_boxplot(ax, average, None, widths = widths)
-ax.plot([1,6],[0,0], linestyle='--', color=gray, linewidth=0.5)
+ax.plot([1,6],[0,0], linestyle='--', color=grey, linewidth=0.5)
 ax.set_xticklabels(w_names,rotation = 45, ha="right")
 jitter = (0.5 - np.random.rand(average.shape[0]))/(1/widths)
 for k in range(average.shape[0]):
-    ax.scatter(np.arange(1,7) + jitter[k], average[k,:], c=gray,s=14)
+    ax.scatter(np.arange(1,7) + jitter[k], average[k,:], c=grey,s=14)
 ax.set_ylim([-1, 2.5])
 ax.set_ylabel('Choice decoding weight')
 separate_axes(ax)
@@ -559,11 +558,11 @@ fi = plt.figure(figsize=[4.8,4.8])
 ax = fi.add_subplot(111)
 widths = 0.6
 fancy_boxplot(ax, variance, None, widths = widths)
-# ax.axhline(0, linestyle='--', color=gray, linewidth=0.5)
+# ax.axhline(0, linestyle='--', color=grey, linewidth=0.5)
 ax.set_xticklabels(w_names,rotation = 45, ha="right")
 #jitter = (0.5 - np.random.rand(average.shape[0]))/(1/widths)
 for k in range(variance.shape[0]):
-    ax.scatter(np.arange(1,7) + jitter[k], variance[k,:], c=gray,s=14)
+    ax.scatter(np.arange(1,7) + jitter[k], variance[k,:], c=grey,s=14)
 ax.set_ylim([0, 0.5])
 ax.set_ylabel('Choice decoding weight variance')
 separate_axes(ax)
@@ -649,21 +648,24 @@ d_dict['hist_stim_coef_delta'] = np.hstack(history_strength) - np.hstack(stim_co
 d_dict['history_strength'] = np.hstack(history_strength)
 d_dict['stim_coef'] = np.hstack(stim_coef)
 df = pd.DataFrame(d_dict)
-df.to_csv('/Users/loesch/Documents/Churchland_lab/Trial-history_manuscript/Figures/Fig1_panels_20250601/hist_delta_vs_performance.csv')
+save_to = '/Users/loesch/Documents/Churchland_lab/Trial-history_manuscript/Figures/Fig1_panels_20250601'
+df.to_csv(os.path.join(save_to, 'hist_delta_vs_performance.csv'))
 
 #Reconstruct line from LME results run in R
 lims = [np.min(df['hist_stim_coef_delta']), np.max(df['hist_stim_coef_delta'])]
 lims = np.round(lims, decimals=1)
 x_vect = np.arange(lims[0],lims[1],0.01)
-regression_line = 0.744872 + (-0.055290 * x_vect)
+regression_line = 0.744872 + (-0.055290 * x_vect) #This is taken from the linear
+# mixed-effects model fitted to this data. Please see "statistical_testing.R"
+# and Supplementary Statistics Table 1.
 
 #-----Grey scatter version
-# gray = '#858585'
+# grey = '#858585'
 # line_col = '#710909'
 # #Try plotting the difference between the stimulus weight and the trial history strength
 # fi = plt.figure(figsize=[4.8,4.8])
 # ax = fi.add_subplot(111)
-# sc = ax.scatter(np.hstack(history_strength) - np.hstack(stim_coef), np.hstack(session_performance), c=gray, edgecolor='w', linewidth=0.5)
+# sc = ax.scatter(np.hstack(history_strength) - np.hstack(stim_coef), np.hstack(session_performance), c=grey, edgecolor='w', linewidth=0.5)
 # ax.plot(x_vect, regression_line, color=line_col)
 # ax.set_ylim([0.5,1])
 # separate_axes(ax)
@@ -671,7 +673,7 @@ regression_line = 0.744872 + (-0.055290 * x_vect)
 
 ###########-----------Figure 1g-----------######################
 
-gray = '#858585'
+grey = '#858585'
 line_col = 'k'
 subj_code = np.zeros([df.shape[0]]) * np.nan
 for k in range(np.unique(df['subject']).shape[0]):
@@ -693,6 +695,17 @@ corr, p_val = pearsonr(np.hstack(history_strength) - np.hstack(stim_coef), np.hs
 anim_idx = np.argmax([np.mean(x) for x in history_strength]) #The mouse is LY008 the last in the list
 #Since the mouse is the last one we can simply index into the list
 no_LY008 = subj_code!=anim_idx
+
+#Prep data frame for LME
+d_dict = dict()
+d_dict['subject'] = np.array(tmp_subj)[no_LY008]
+d_dict['performance'] = np.hstack(session_performance)[no_LY008]
+d_dict['hist_stim_coef_delta'] = (np.hstack(history_strength) - np.hstack(stim_coef))[no_LY008]
+d_dict['history_strength'] = np.hstack(history_strength)[no_LY008]
+d_dict['stim_coef'] = np.hstack(stim_coef)[no_LY008]
+df = pd.DataFrame(d_dict)
+df.to_csv(os.path.join(save_to, 'Reviewer_figure3a_hist_delta_vs_performance.csv'))
+
 
 #Use the regression coefficients from the lme to fit the line
 lims = [np.min(df['hist_stim_coef_delta']), np.max(df['hist_stim_coef_delta'])]

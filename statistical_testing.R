@@ -1,3 +1,17 @@
+# This script performs all the statistical testing for the analysis in
+# "Anterior cingulate neurons combine outcome monitoring of past decisions
+# with ongoing movement signals", by Oesch et al.
+#
+# The analyses here assume that all the results data frames are saved as .csv
+# files into the same file directory (base_dir, to be set by the user below).
+# To export the results from statistical analyses use the following:
+# write.csv(summary(fit)$coefficients, "path_to_my_file.csv") for lme results, and
+# write.csv(summary(emm, by = NULL, adjust = "sidak")$contrasts,"path_to_my_file.csv")
+# for the contrasts on the computed marginal means with p-values adjusted for 
+# multiple comparison using sidak's method.
+#
+# LO, February 2026
+#-------------------------------------------------------------------------------
 
 #Importing
 library(lmerTest)
@@ -155,3 +169,38 @@ summary(fit)
 data <- read.csv(file.path(base_dir, "Supplementary_Fig5.csv"), header=TRUE, sep=",")
 fit <- lmerTest::lmer(dR ~ lens_AP * lens_DV + sex  +  (1 |subject), data = data, REML=FALSE) 
 summary(fit)
+
+#---------Reviewer Figure 2A----------------------------------------------------
+# Test for decoding accuracy difference between data and shuffle for all sessions with no overlap between ITI phases
+data <- read.csv(file.path(base_dir, "Reviewer_Figure2a_decoding_accuracy_decoder_vs_shuffle_no_overlap.csv"), header=TRUE, sep=",")
+data$condition <- relevel(factor(data$condition), ref="shuffle") #Set shuffle to be the reference class
+fit <- lmerTest::lmer(accuracy ~ condition * time + (1  |subject/session), data = data, REML=FALSE) 
+summary(fit)
+
+# -----------Reviewer Figure 2B---------------------------------------------
+# Comparing the decoding accuracy between the different trial history contexts for sessions with no overlap between ITI phases
+data <- read.csv(file.path(base_dir, "Reviewer_figure2b_class_wise_decoding_accuracy_no_overlap.csv"), header=TRUE, sep=",")
+fit <- lmerTest::lmer(accuracy ~ history_context * time + (1 |subject/session), data = data, REML=FALSE) 
+summary(fit)
+emm = emmeans(fit, specs = pairwise ~ history_context | time, pbkrtest.limit = 12236)
+summary(emm, by = NULL, adjust = "sidak")
+
+# ------------Reviewer Figure 2E-----------------------------------------------
+# Compare cross-decoding accuracy with shuffled control for sessions with no overlap for the two ITI phases
+data <- read.csv(file.path(base_dir, "Reviewer_Figure2e_phase_wise_cross_decoding_no_overlap.csv"), header=TRUE, sep=",")
+data$condition <- relevel(factor(data$condition), ref="shuffle")
+data$seed <- relevel(factor(data$seed), ref="Early ITI") #Seed here refers to the phase the decoder was trained in
+data$phase <- relevel(factor(data$phase), ref="Early ITI") #Phase is the testing phase
+fit <- lmerTest::lmer(accuracy ~ seed*phase*condition + (1  |subject/session), data = data, REML=FALSE) 
+summary(fit)
+emm = emmeans(fit, specs = pairwise ~ condition | seed*phase)
+summary(emm, by = NULL, adjust = "sidak")
+
+# -------------Reviewer Figure 3A-----------------------------------------
+# Fitting linear relationship between the difference between history strength
+# and stimulus weight, and performance excluding one animal (LY008) with sessions
+# showing a large difference between history strength and stimulus weight.
+data <- read.csv(file.path(base_dir, "Reviewer_figure3a_hist_delta_vs_performance.csv"), header=TRUE, sep=",")
+fit <- lmerTest::lmer(performance ~ hist_stim_coef_delta + (1 |subject), data = data, REML=FALSE) 
+summary(fit)
+
