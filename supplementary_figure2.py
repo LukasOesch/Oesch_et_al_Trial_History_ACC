@@ -333,7 +333,7 @@ for session_dir in sessions:
       # Because we only stored the trial-by-trial logodds for each class label,
       # we have to re-compute the classification using the class logodds and the
       # true class labels. So, belwo here we first retrieve the trial-wise
-      # loggods.
+      # logodds.
       if num_classes == 2:
           tmp_dec = np.hstack(mod[time_p]['model_prediction_logodds']).T #list containing class logodds for every test sample, number of list elements is k_folds * subsampling roudns
           tmp_shuf = np.hstack(mod[time_p]['shuffle_prediction_logodds']).T
@@ -362,8 +362,16 @@ for session_dir in sessions:
                  shuffle_trial_acc[time_p,k] = np.mean(np.argmax(tmp_shu[tmp_idx == k],axis=1) == labels[k])
       
     #Retrieve ITI duration
-    tmp = np.squeeze(trialdata['trial_start_time'].tolist()) + np.squeeze(trialdata['DemonWaitForCenterFixation'].tolist())[:,1]
-    ITI_duration.append(np.hstack((np.nan, np.diff(tmp)))[s_dict['valid_trials']])
+    tmp = [np.nan]
+    for k in range(0, trialdata.shape[0]-1):
+        if np.isnan(trialdata['DemonEarlyWithdrawal'][k][0]): #After trials that were completed or had no choice
+            if np.isnan(trialdata['response_side'][k])==0: #For completed trials take the time of outcome presentation as start point
+                tmp.append((trialdata['trial_start_time'][k+1] + trialdata['DemonWaitForCenterFixation'][k+1][1]) - (trialdata['trial_start_time'][k] + trialdata['outcome_presentation'][k][0]))
+            else: #For no choice trials take the end of the choice period as start point
+                tmp.append((trialdata['trial_start_time'][k+1] + trialdata['DemonWaitForCenterFixation'][k+1][1]) - (trialdata['trial_start_time'][k] + trialdata['FinishTrial'][k][0]))
+        elif np.isnan(trialdata['DemonEarlyWithdrawal'][k][0]) == 0: #For early withdrawals the early withdrawal time is the start
+            tmp.append((trialdata['trial_start_time'][k+1] + trialdata['DemonWaitForCenterFixation'][k+1][1]) - (trialdata['trial_start_time'][k] + trialdata['DemonEarlyWithdrawal'][k][0]))
+    ITI_duration.append(np.array(tmp)[s_dict['valid_trials']])
     
     trial_accuracy.append(trial_acc)
     shuffle_trial_accuracy.append(shuffle_trial_acc)
